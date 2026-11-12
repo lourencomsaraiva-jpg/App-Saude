@@ -20,7 +20,7 @@ function configProblems(env: Record<string, string | undefined>): string[] {
   const url = env.NEXT_PUBLIC_SUPABASE_URL?.trim();
   if (!url) out.push("Falta <code>NEXT_PUBLIC_SUPABASE_URL</code>.");
   else if (!/^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/i.test(url)) out.push("<code>NEXT_PUBLIC_SUPABASE_URL</code> deve ser só <code>https://xxxx.supabase.co</code> (sem /rest/v1 nem espaços).");
-  if (!env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim()) out.push("Falta <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> (chave anon/publishable).");
+  if (!env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim()) out.push("Falta <code>NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY</code> (ou <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code>): a chave publishable do Supabase.");
   if (!env.ALLOWED_EMAIL?.trim()) out.push("Falta <code>ALLOWED_EMAIL</code> (o teu email de login).");
   return out;
 }
@@ -28,13 +28,13 @@ function configProblems(env: Record<string, string | undefined>): string[] {
 export async function proxy(request: NextRequest) {
   const problems = configProblems({
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY),
     ALLOWED_EMAIL: process.env.ALLOWED_EMAIL,
   });
   if (problems.length) return configError(problems);
 
   let response = NextResponse.next({ request });
-  const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!.trim().replace(/\/$/, ""), process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!.trim(), {
+  const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!.trim().replace(/\/$/, ""), (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)!.trim(), {
     cookies: {
       getAll() {
         return request.cookies.getAll();
