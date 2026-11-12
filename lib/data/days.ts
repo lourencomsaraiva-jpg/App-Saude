@@ -29,17 +29,19 @@ const ACTIVITY_COLS =
  * Carrega dias num intervalo e calcula os resumos com lib/calc.
  * `onlyWithData`: devolve só dias com algum registo (comida, atividade, peso, sono, notas).
  */
-export async function loadDays(db: DB, start: ISODate, end: ISODate, settings: Settings, onlyWithData = true, userId?: string): Promise<DayView[]> {
+export async function loadDays(db: DB, start: ISODate, end: ISODate, settingsIn: Settings | Promise<Settings>, onlyWithData = true, userId?: string): Promise<DayView[]> {
   // userId só é necessário com o cliente admin (cron); com o cliente do utilizador a RLS já filtra.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const scope = (q: any) => (userId ? q.eq("user_id", userId) : q);
-  const [meals, acts, days, sleeps] = await Promise.all([
+  // as definições podem vir como promessa: assim carregam em paralelo com estas leituras
+  const [settings, meals, acts, days, sleeps] = await Promise.all([
+    settingsIn,
     scope(db.from("meals").select("date, meal_items(kcal, protein_g, carbs_g, fat_g, fiber_g)").gte("date", start).lte("date", end)),
     scope(db.from("activities").select(ACTIVITY_COLS).gte("local_date", start).lte("local_date", end).order("start_time")),
     scope(db.from("days").select("*").gte("date", start).lte("date", end)),
     scope(db.from("sleep").select("*").gte("day_date", start).lte("day_date", end)),
   ]);
-  for (const r of [meals, acts, days, sleeps] as Array<{ error: { message: string } | null }>) if (r.error) throw new Error(r.error.message);
+  for (const r of [meals, acts, days, sleeps] as unknown as Array<{ error: { message: string } | null }>) if (r.error) throw new Error(r.error.message);
 
   const itemsByDate = new Map<string, Array<{ kcal: number; protein_g: number | null; carbs_g: number | null; fat_g: number | null; fiber_g: number | null }>>();
   for (const m of (meals.data ?? []) as unknown as Array<Pick<MealRow, "date"> & { meal_items: NonNullable<MealRow["meal_items"]> }>) {

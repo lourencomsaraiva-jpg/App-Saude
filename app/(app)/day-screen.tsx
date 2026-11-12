@@ -16,9 +16,10 @@ import { DayFields } from "@/components/day/day-fields";
 export async function DayScreen({ date }: { date: string }) {
   const { supabase } = await requireUser();
   const today = todayInTz();
-  const settings = await loadSettings(supabase);
-  const [days, meals, foods, recipes, planned, lastNight] = await Promise.all([
-    loadDays(supabase, date, date, settings, false),
+  const settingsP = loadSettings(supabase);
+  const [settings, days, meals, foods, recipes, planned, lastNight] = await Promise.all([
+    settingsP,
+    loadDays(supabase, date, date, settingsP, false),
     supabase.from("meals").select("*, meal_items(*)").eq("date", date).order("eaten_at", { nullsFirst: false }).order("created_at"),
     supabase.from("foods").select("*").order("is_favorite", { ascending: false }).order("name"),
     supabase.from("recipes").select("*, recipe_items(*)").order("kind").order("name"),

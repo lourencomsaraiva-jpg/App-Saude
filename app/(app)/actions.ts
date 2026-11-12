@@ -107,8 +107,8 @@ export async function addItems(date: string, mealLabel: string, items: ItemInput
   if (!isISODate(date)) return fail("Data inválida.");
   if (!items.length) return fail("Sem alimentos.");
   const mealId = await getOrCreateMeal(date, label(mealLabel), photoPath);
-  const { data: last } = await supabase.from("meal_items").select("position").eq("meal_id", mealId).order("position", { ascending: false }).limit(1).maybeSingle();
-  const start = (last?.position ?? -1) + 1;
+  // posição pelo relógio (ordem cronológica) — evita uma leitura extra à base de dados
+  const start = Math.floor(Date.now() / 1000) % 1_000_000_000;
   const rows = items.map((i, idx) => {
     const v = { kcal: round1(Number(i.kcal) || 0), protein_g: nOrNull(i.protein_g), carbs_g: nOrNull(i.carbs_g), fat_g: nOrNull(i.fat_g), fiber_g: nOrNull(i.fiber_g) };
     return {
