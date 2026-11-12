@@ -53,13 +53,13 @@ export function generatePlan(p: PlanProfile, start: ISODate = "2026-11-09", end:
   });
   const strength = (dow: number, light = false): DaySpec => ({
     type: "força",
-    title: light ? "Força (versão leve: 2 séries, sem falha)" : dow === 2 ? "Força A" : "Força B",
+    title: dow === 2 ? "Força — Pernas + Peito" : "Força — Estabilidade + Braços",
     distance_km: null,
     target_pace_min_s: null,
     target_pace_max_s: null,
     target_hr_min: null,
     target_hr_max: null,
-    structure: [{ kind: "força", description: light ? "Só 2 séries por exercício, cargas a ~70 %, sem falha." : "Ver plano de força." }],
+    structure: [{ kind: "força", description: light ? "Semana de afinamento: confirmar volume com o plano." : "Ver plano de força." }],
     strength_day: dow,
   });
   const quality = (title: string, km: number, reps: number, repDist: string, pace: number, rec: string): DaySpec => ({

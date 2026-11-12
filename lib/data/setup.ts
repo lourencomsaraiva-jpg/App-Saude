@@ -60,7 +60,7 @@ export async function ensureSetup(db: DB, userId: string): Promise<{ created: bo
     sessionIdByDay.set(s.day_of_week, (session as { id: string }).id);
     await must(
       db.from("strength_exercises").insert(
-        s.exercises.map((e, position) => ({ user_id: userId, session_id: (session as { id: string }).id, position, name: e.name, sets: e.sets, reps: e.reps, load_kg: e.load_kg, superset: e.superset, notes: e.notes })),
+        s.exercises.map((e, position) => ({ user_id: userId, session_id: (session as { id: string }).id, position, name: e.name, zone: e.zone, sets: e.sets, reps: e.reps, load_range: e.load_range, load_kg: null, superset: e.superset, notes: e.notes })),
       ),
       "Exercícios de força",
     );

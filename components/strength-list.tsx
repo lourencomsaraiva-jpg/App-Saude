@@ -16,7 +16,7 @@ export function StrengthList({ session }: { session: Pick<StrengthSessionRow, "n
             </span>
             <span className="num shrink-0 text-muted">
               {e.sets ?? "—"} × {e.reps ?? "—"}
-              {e.load_kg ? ` · ${fmt(Number(e.load_kg), 1)} kg` : ""}
+              {e.load_kg ? ` · ${fmt(Number(e.load_kg), 1)} kg` : e.load_range && e.load_range !== "peso do corpo" ? ` · ${e.load_range}` : ""}
             </span>
           </li>
         ))}

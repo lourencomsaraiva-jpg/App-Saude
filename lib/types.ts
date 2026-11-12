@@ -205,5 +205,5 @@ export interface StrengthSessionRow {
   name: string;
   day_of_week: number | null;
   notes: string | null;
-  strength_exercises?: Array<{ id: string; position: number; name: string; sets: number | null; reps: string | null; load_kg: number | null; superset: string | null; notes: string | null }>;
+  strength_exercises?: Array<{ id: string; position: number; name: string; zone?: string | null; sets: number | null; reps: string | null; load_range?: string | null; load_kg: number | null; superset: string | null; notes: string | null }>;
 }

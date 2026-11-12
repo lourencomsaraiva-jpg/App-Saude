@@ -98,12 +98,14 @@ export function StrengthEditor({ sessions }: { sessions: StrengthSessionRow[] })
           <h3 className="text-sm font-semibold">{s.day_of_week !== null ? `${DOW[s.day_of_week]} · ` : ""}{s.name}</h3>
           {s.notes && <p className="text-xs text-muted">{s.notes}</p>}
           <table className="num mt-2 w-full text-xs">
-            <thead className="text-muted"><tr className="text-left"><th className="py-1">Exercício</th><th>Séries</th><th>Reps</th><th>Carga kg</th></tr></thead>
+            <thead className="text-muted"><tr className="text-left"><th className="py-1">Exercício</th><th>Séries</th><th>Reps</th><th title="Carga que usaste">Usada kg</th></tr></thead>
             <tbody>
               {[...(s.strength_exercises ?? [])].sort((a, b) => a.position - b.position).map((e) => (
                 <tr key={e.id} className={`border-t border-line align-top ${pending ? "opacity-60" : ""}`}>
                   <td className="py-1.5 pr-2">
-                    <span className="chip mr-1">{e.superset}</span>{e.name}
+                    {e.zone && <div className="text-[10px] uppercase tracking-wide text-accent">{e.zone}</div>}
+                    <span className="chip mr-1">{e.superset}</span><span className="font-medium">{e.name}</span>
+                    {e.load_range && <div className="text-muted">Carga do plano: {e.load_range}</div>}
                     {e.notes && <div className="text-muted">{e.notes}</div>}
                   </td>
                   <td><input className="!w-12 !px-1 !py-0.5 text-xs" defaultValue={e.sets ?? ""} onBlur={(ev) => ev.target.value !== String(e.sets ?? "") && start(async () => { await saveStrengthExercise(e.id, { sets: ev.target.value }); })} /></td>
@@ -115,7 +117,7 @@ export function StrengthEditor({ sessions }: { sessions: StrengthSessionRow[] })
           </table>
         </div>
       ))}
-      <p className="text-xs text-muted">Halteres ajustáveis 2–24 kg; carga total quando são dois halteres. As letras agrupam os supersets.</p>
+      <p className="text-xs text-muted">A1 → A2 = superset (3 voltas, 60–75 s de descanso depois do par). Em &quot;Usada kg&quot; regista a carga que estás a usar.</p>
     </div>
   );
 }

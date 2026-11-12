@@ -107,38 +107,54 @@ export const DEFAULT_RACES = [
 
 export interface StrengthExerciseSeed {
   name: string;
+  zone: string;
   sets: number;
   reps: string;
-  load_kg: number | null;
-  superset: string | null;
+  load_range: string;
+  superset: string;
   notes: string;
 }
 
+const STRENGTH_GENERAL =
+  "Halteres ajustáveis JUPPLIES 2–24 kg (15 níveis: sobe 1,5–2 kg de cada vez). Superset: 3 voltas por bloco, 60–75 s de descanso depois do par. Aquece 5 min (marcha rápida, mobilidade de anca). Mantém a carga 2–3 semanas até as reps ficarem fáceis e só depois sobes. Dor articular (≠ fadiga muscular): para o exercício.";
+
+/** Plano de força do atleta ("Força para Corredores"). day_of_week: 0 = segunda. */
 export const DEFAULT_STRENGTH: Array<{ name: string; day_of_week: number; notes: string; exercises: StrengthExerciseSeed[] }> = [
   {
-    name: "Força A — pernas e core",
+    name: "Pernas + Peito (~25 min)",
     day_of_week: 2,
-    notes: "Halteres ajustáveis 2–24 kg. Descanso 60–90 s entre supersets. Na semana da prova: só 2 séries, sem falha.",
+    notes: STRENGTH_GENERAL,
     exercises: [
-      { name: "Agachamento goblet", sets: 3, reps: "10", load_kg: 20, superset: "A", notes: "Peito alto, joelhos na linha dos pés." },
-      { name: "Gémeos em pé (unilateral)", sets: 3, reps: "15", load_kg: 16, superset: "A", notes: "Pausa de 1 s em cima." },
-      { name: "Peso morto romeno com halteres", sets: 3, reps: "10", load_kg: 2 * 18, superset: "B", notes: "Anca para trás, costas neutras. Carga = 2 halteres." },
-      { name: "Prancha", sets: 3, reps: "40 s", load_kg: null, superset: "B", notes: "Glúteos contraídos." },
-      { name: "Afundo búlgaro", sets: 3, reps: "8 por perna", load_kg: 2 * 10, superset: "C", notes: "Tronco ligeiramente inclinado." },
-      { name: "Dead bug", sets: 3, reps: "10", load_kg: null, superset: "C", notes: "Lombar colada ao chão." },
+      { superset: "A1", zone: "Quadríceps/Glúteos", name: "Agachamento búlgaro", sets: 3, reps: "8-10/perna", load_range: "6-10 kg", notes: "Pé de trás elevado num banco/cadeira; desce até a coxa da frente ficar paralela ao chão." },
+      { superset: "A2", zone: "Peito", name: "Flexões (push-ups)", sets: 3, reps: "10-15", load_range: "peso do corpo", notes: "Mãos ligeiramente mais largas que os ombros, corpo reto. Joelhos no chão se precisares de reduzir dificuldade." },
+      { superset: "B1", zone: "Cadeia posterior", name: "Peso morto romeno unilateral", sets: 3, reps: "8/perna", load_range: "8-12 kg", notes: "Perna de apoio ligeiramente fletida, tronco reto. Sente o alongamento no isquiotibial." },
+      { superset: "B2", zone: "Peito", name: "Supino no chão (floor press)", sets: 3, reps: "10-12", load_range: "8-12 kg", notes: "Deitado de costas, joelhos fletidos. Halteres sobem em linha reta acima do peito, cotovelos param no chão." },
+      { superset: "C1", zone: "Cadeia posterior", name: "Ponte de glúteos com carga", sets: 3, reps: "12-15", load_range: "10-16 kg", notes: "Haltere apoiado sobre a bacia. Aperta os glúteos no topo 1-2 s." },
+      { superset: "C2", zone: "Core", name: "Prancha frontal", sets: 3, reps: "30-45 s", load_range: "peso do corpo", notes: "Cotovelos sob os ombros, corpo reto da cabeça aos calcanhares." },
     ],
   },
   {
-    name: "Força B — cadeia posterior, tronco e estabilidade",
+    name: "Estabilidade + Braços (~25 min)",
     day_of_week: 4,
-    notes: "Halteres ajustáveis 2–24 kg. Evitar falha muscular na véspera do longo.",
+    notes: STRENGTH_GENERAL + " Peito e braços são acessórios — volume baixo de propósito para não comprometer a recuperação das pernas.",
     exercises: [
-      { name: "Step-up para banco", sets: 3, reps: "8 por perna", load_kg: 2 * 12, superset: "A", notes: "Empurrar com o pé de cima." },
-      { name: "Remada unilateral", sets: 3, reps: "10 por braço", load_kg: 22, superset: "A", notes: "Cotovelo junto ao corpo." },
-      { name: "Hip thrust com halter", sets: 3, reps: "12", load_kg: 24, superset: "B", notes: "Pausa de 1 s em cima." },
-      { name: "Flexões", sets: 3, reps: "12", load_kg: null, superset: "B", notes: "Corpo em linha." },
-      { name: "Ponte lateral (Copenhaga curta)", sets: 3, reps: "20 s por lado", load_kg: null, superset: "C", notes: "Adutores e estabilidade da anca." },
-      { name: "Elevação de pé em equilíbrio", sets: 3, reps: "30 s por pé", load_kg: null, superset: "C", notes: "Propriocepção do tornozelo." },
+      { superset: "A1", zone: "Quadríceps/Glúteos", name: "Afundo lateral", sets: 3, reps: "8-10/perna", load_range: "6-10 kg", notes: "Passo largo para o lado, senta na anca do lado que se move, perna oposta fica esticada." },
+      { superset: "A2", zone: "Braços", name: "Rosca bíceps", sets: 3, reps: "10-12", load_range: "6-10 kg", notes: "Cotovelos fixos junto ao corpo, sobe controlado sem balançar o tronco." },
+      { superset: "B1", zone: "Quadríceps/Glúteos", name: "Step-down excêntrico", sets: 3, reps: "8/perna", load_range: "4-8 kg", notes: "Em cima de um step, desce devagar (3-4 s) sem deixar o joelho cair para dentro." },
+      { superset: "B2", zone: "Braços", name: "Tríceps francês (overhead)", sets: 3, reps: "10-12", load_range: "6-10 kg", notes: "Um haltere com as duas mãos atrás da cabeça, cotovelos apontam para cima e ficam fixos, estende os braços." },
+      { superset: "C1", zone: "Core", name: "Prancha lateral", sets: 3, reps: "25-35 s/lado", load_range: "peso do corpo", notes: "Cotovelo sob o ombro, corpo em linha reta." },
+      { superset: "C2", zone: "Gémeos/Estabilidade", name: "Elevação de gémeos unipodal", sets: 3, reps: "10-12/perna", load_range: "4-8 kg", notes: "Um haltere na mão do mesmo lado da perna de apoio. Sobe controlado, sem balançar." },
+    ],
+  },
+  {
+    name: "Opcional — Core & Mobilidade (~15 min, sem halteres)",
+    day_of_week: 0,
+    notes: "Segunda-feira em semanas com boa energia, ou substituto leve se faltares a quarta/sexta.",
+    exercises: [
+      { superset: "1", zone: "Core", name: "Prancha frontal", sets: 3, reps: "30-40 s", load_range: "peso do corpo", notes: "Igual à de quarta — mantém como referência de progressão." },
+      { superset: "2", zone: "Core", name: "Bird-dog", sets: 3, reps: "8/lado", load_range: "peso do corpo", notes: "De gatas, estende braço e perna opostos em simultâneo, bacia estável." },
+      { superset: "3", zone: "Core", name: "Dead bug", sets: 3, reps: "10/lado", load_range: "peso do corpo", notes: "Deitado de costas, baixa braço e perna opostos até quase tocar no chão, lombar sempre no chão." },
+      { superset: "4", zone: "Mobilidade", name: "Mobilidade de anca (90/90)", sets: 2, reps: "8/lado", load_range: "peso do corpo", notes: "Sentado, roda entre as duas posições de anca — melhora amplitude de passada." },
     ],
   },
 ];
