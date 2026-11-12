@@ -6,7 +6,8 @@ import { formatMinutes } from "@/lib/calc/sleep";
 import { requireUser } from "@/lib/auth";
 import { loadDays } from "@/lib/data/days";
 import { loadSettings } from "@/lib/data/settings";
-import type { FoodRow, MealRow, PlannedWorkoutRow, RecipeRow } from "@/lib/types";
+import type { FoodRow, MealRow, PlannedWorkoutRow, RecipeRow, StrengthSessionRow } from "@/lib/types";
+import { StrengthList } from "@/components/strength-list";
 import { Bar, Section } from "@/components/ui";
 import { SyncButton } from "@/components/sync-button";
 import { QuickAdd } from "@/components/day/quick-add";
@@ -23,7 +24,7 @@ export async function DayScreen({ date }: { date: string }) {
     supabase.from("meals").select("*, meal_items(*)").eq("date", date).order("eaten_at", { nullsFirst: false }).order("created_at"),
     supabase.from("foods").select("*").order("is_favorite", { ascending: false }).order("name"),
     supabase.from("recipes").select("*, recipe_items(*)").order("kind").order("name"),
-    supabase.from("planned_workouts").select("*").eq("date", date),
+    supabase.from("planned_workouts").select("*, strength_sessions(name, notes, strength_exercises(*))").eq("date", date),
     supabase.from("sleep").select("*").eq("day_date", addDays(date, -1)).maybeSingle(),
   ]);
   const day = days[0];
@@ -105,8 +106,11 @@ export async function DayScreen({ date }: { date: string }) {
               <span className="font-medium">{w.title}</span>
               {w.target_pace_min_s && <span className="text-muted"> · {formatPace(w.target_pace_min_s / 60)}–{formatPace((w.target_pace_max_s ?? w.target_pace_min_s) / 60)}/km</span>}
               {w.target_hr_max && <span className="text-muted"> · FC &lt; {w.target_hr_max}</span>}
+              {w.type === "força" && (w as PlannedWorkoutRow & { strength_sessions: StrengthSessionRow | null }).strength_sessions && (
+                <StrengthList session={(w as PlannedWorkoutRow & { strength_sessions: StrengthSessionRow }).strength_sessions} />
+              )}
             </div>
-            <span className={`chip ${w.status === "feito" ? "text-good" : ""}`}>{w.status}</span>
+            <span className={`chip shrink-0 ${w.status === "feito" ? "text-good" : ""}`}>{w.status}</span>
           </div>
         ))}
         {day.activities.map((a) => (

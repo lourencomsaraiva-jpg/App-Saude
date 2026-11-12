@@ -6,6 +6,7 @@ import { formatDuration, formatPace } from "@/lib/calc/running";
 import { weeklyCompliance } from "@/lib/plan/generate";
 import type { PlannedWorkoutRow, RaceRow, StrengthSessionRow } from "@/lib/types";
 import { PageHeader, Section } from "@/components/ui";
+import { StrengthList } from "@/components/strength-list";
 import { AddWorkout, StrengthEditor, WorkoutEditor } from "./client";
 
 const TYPE_COLOR: Record<string, string> = { qualidade: "text-warn", longo: "text-accent", prova: "text-bad", força: "text-muted" };
@@ -25,6 +26,7 @@ export default async function PlanoPage({ searchParams }: { searchParams: Promis
     supabase.from("weekly_reviews").select("id, week_start").eq("status", "pendente").limit(1).maybeSingle(),
   ]);
   const workouts = (wData ?? []) as PlannedWorkoutRow[];
+  const sessionById = new Map(((sData ?? []) as StrengthSessionRow[]).map((x) => [x.id, x]));
   const races = (rData ?? []) as RaceRow[];
   const actsByPlanned = new Map((acts ?? []).filter((a) => a.planned_workout_id).map((a) => [a.planned_workout_id as string, a]));
   const compliance = weeklyCompliance(workouts);
@@ -87,7 +89,8 @@ export default async function PlanoPage({ searchParams }: { searchParams: Promis
                         {w.target_pace_min_s ? ` · ${formatPace(w.target_pace_min_s / 60)}–${formatPace((w.target_pace_max_s ?? w.target_pace_min_s) / 60)}/km` : ""}
                         {w.target_hr_max ? ` · FC ${w.target_hr_min ? `${w.target_hr_min}–` : "< "}${w.target_hr_max}` : ""}
                       </div>
-                      {w.structure?.length > 0 && w.type !== "descanso" && (
+                      {w.type === "força" && w.strength_session_id && sessionById.get(w.strength_session_id) && <StrengthList session={sessionById.get(w.strength_session_id)!} />}
+                      {w.structure?.length > 0 && w.type !== "descanso" && !(w.type === "força" && w.strength_session_id) && (
                         <ul className="mt-1 list-disc pl-4 text-xs text-muted">
                           {w.structure.map((s, i) => <li key={i}>{s.repeat ? `${s.repeat} × ` : ""}{s.description}</li>)}
                         </ul>
