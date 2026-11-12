@@ -709,3 +709,15 @@ export async function probeWellness(): Promise<Result<string[]>> {
     return fail((e as Error).message);
   }
 }
+
+/** Define (ou muda) a password de entrada, para não depender de emails. */
+export async function setPassword(form: FormData): Promise<Result> {
+  const { supabase } = await requireUser();
+  const p1 = String(form.get("password") ?? "");
+  const p2 = String(form.get("password2") ?? "");
+  if (p1.length < 8) return fail("A password tem de ter pelo menos 8 caracteres.");
+  if (p1 !== p2) return fail("As duas passwords não são iguais.");
+  const { error } = await supabase.auth.updateUser({ password: p1 });
+  if (error) return fail(`Não foi possível guardar: ${error.message}`);
+  return { ok: true, message: "Password guardada. A partir de agora entras com email + password." };
+}

@@ -1,6 +1,6 @@
 "use client";
 import { useState, useTransition } from "react";
-import { deletePhase, deleteRace, importSeedFile, probeWellness, savePhase, saveProfile, saveRace, syncNow } from "../actions";
+import { deletePhase, deleteRace, importSeedFile, probeWellness, savePhase, saveProfile, saveRace, setPassword, syncNow } from "../actions";
 
 type V = Record<string, string | number | null>;
 const F = ({ name, label, v, type = "text", hint }: { name: string; label: string; v: V; type?: string; hint?: string }) => (
@@ -139,5 +139,31 @@ export function ProbeWellness() {
         </span>
       )}
     </span>
+  );
+}
+
+export function SetPasswordForm() {
+  const [pending, start] = useTransition();
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  return (
+    <form
+      className="space-y-2"
+      onSubmit={(e) => {
+        e.preventDefault();
+        const form = e.currentTarget;
+        const fd = new FormData(form);
+        start(async () => {
+          const r = await setPassword(fd);
+          setMsg(r.ok ? { ok: true, text: r.message ?? "Guardada." } : { ok: false, text: r.message });
+          if (r.ok) form.reset();
+        });
+      }}
+    >
+      <input type="email" autoComplete="username" className="hidden" readOnly />
+      <label className="block"><span className="label">Nova password (mín. 8 caracteres)</span><input name="password" type="password" autoComplete="new-password" required /></label>
+      <label className="block"><span className="label">Repetir</span><input name="password2" type="password" autoComplete="new-password" required /></label>
+      <button className="btn btn-sm" disabled={pending}>{pending ? "A guardar…" : "Guardar password"}</button>
+      {msg && <p className={`text-sm ${msg.ok ? "text-good" : "text-bad"}`}>{msg.text}</p>}
+    </form>
   );
 }

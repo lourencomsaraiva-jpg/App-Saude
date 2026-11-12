@@ -31,3 +31,15 @@ export async function verifyCode(_prev: LoginState, form: FormData): Promise<Log
   if (error) return { step: "code", email, ok: false, message: "Código inválido ou expirado. Pede outro." };
   redirect("/");
 }
+
+/** Entrada com email + password (sem emails; funciona na app instalada no ecrã principal). */
+export async function signInPassword(_prev: LoginState, form: FormData): Promise<LoginState> {
+  const email = String(form.get("email") ?? "").trim().toLowerCase();
+  const password = String(form.get("password") ?? "");
+  const fail = { step: "email" as const, email, ok: false, message: "Email ou password errados. Se ainda não definiste password, entra por email e define-a em Definições." };
+  if (!isAllowedEmail(email) || !password) return fail;
+  const supabase = await createClient();
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) return fail;
+  redirect("/");
+}

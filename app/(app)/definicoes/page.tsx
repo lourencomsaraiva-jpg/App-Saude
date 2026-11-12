@@ -6,7 +6,7 @@ import { loadSettings } from "@/lib/data/settings";
 import type { RaceRow } from "@/lib/types";
 import { PageHeader, Section } from "@/components/ui";
 import { SyncButton } from "@/components/sync-button";
-import { Backfill, ImportSeed, PhaseRowEditor, ProbeWellness, ProfileForm, RaceEditor } from "./client";
+import { Backfill, ImportSeed, PhaseRowEditor, ProbeWellness, ProfileForm, RaceEditor, SetPasswordForm } from "./client";
 
 export default async function DefinicoesPage() {
   const { supabase, user } = await requireUser();
@@ -26,6 +26,11 @@ export default async function DefinicoesPage() {
   return (
     <div className="space-y-4">
       <PageHeader title="Definições" subtitle={user.email} />
+
+      <Section title="Password de entrada">
+        <p className="mb-2 text-xs text-muted">Define uma password para entrares sem precisar de emails (também na app instalada no ecrã principal).</p>
+        <SetPasswordForm />
+      </Section>
 
       <Section title="Ligação Garmin (via Intervals.icu)" right={<SyncButton compact />}>
         <dl className="num grid grid-cols-2 gap-2 text-sm">
