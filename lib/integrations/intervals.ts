@@ -18,15 +18,19 @@ export interface IntervalsConfig {
 }
 
 export function intervalsConfigFromEnv(): IntervalsConfig | null {
-  const athleteId = process.env.INTERVALS_ATHLETE_ID;
-  const apiKey = process.env.INTERVALS_API_KEY;
+  // IDs do Intervals.icu são "i" minúsculo + número (ex.: i741204); tolera maiúsculas e espaços.
+  const athleteId = process.env.INTERVALS_ATHLETE_ID?.trim().toLowerCase().replace(/\s+/g, "");
+  const apiKey = process.env.INTERVALS_API_KEY?.trim();
   return athleteId && apiKey ? { athleteId, apiKey } : null;
 }
 
 async function get<T>(cfg: IntervalsConfig, path: string): Promise<T> {
   const auth = Buffer.from(`API_KEY:${cfg.apiKey}`).toString("base64");
   const res = await fetch(`${BASE}${path}`, { headers: { Authorization: `Basic ${auth}`, Accept: "application/json" }, signal: AbortSignal.timeout(25_000), cache: "no-store" });
-  if (!res.ok) throw new Error(`Intervals.icu ${res.status} em ${path.split("?")[0]}`);
+  if (!res.ok) {
+    const hint = res.status === 401 || res.status === 403 ? " — verifica INTERVALS_API_KEY e INTERVALS_ATHLETE_ID (ex.: i741204) na Vercel" : "";
+    throw new Error(`Intervals.icu ${res.status} em ${path.split("?")[0]}${hint}`);
+  }
   return (await res.json()) as T;
 }
 
