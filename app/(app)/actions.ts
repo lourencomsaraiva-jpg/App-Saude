@@ -9,6 +9,7 @@ import { analyzeActivity, coachChat, raceProjection, weeklyReview } from "@/lib/
 import { isISODate, todayInTz } from "@/lib/calc/dates";
 import { parseDecimal, parseMultiplier, round1 } from "@/lib/calc/numbers";
 import { checkKcalConsistency, scaleNutrients } from "@/lib/calc/nutrition";
+import { matchLocal } from "@/lib/food/local-match";
 import { parseDurationHms } from "@/lib/calc/running";
 import { parseSleepText, validateSleep } from "@/lib/calc/sleep";
 import { importSeed, type SeedEntry } from "@/lib/import/seed";
@@ -256,17 +257,32 @@ export async function listMealsOn(date: string) {
 
 async function foodsForPrompt() {
   const { supabase } = await requireUser();
-  const { data } = await supabase.from("foods").select("name, serving, kcal, protein_g, carbs_g, fat_g, fiber_g").order("name").limit(80);
-  return (data ?? []) as FoodRow[];
+  const { data } = await supabase.from("foods").select("id, name, serving, serving_g, kcal, protein_g, carbs_g, fat_g, fiber_g").order("name").limit(200);
+  return ((data ?? []) as FoodRow[]).map((f) => ({ ...f, kcal: Number(f.kcal), protein_g: Number(f.protein_g), carbs_g: Number(f.carbs_g), fat_g: Number(f.fat_g), fiber_g: Number(f.fiber_g), serving_g: f.serving_g === null ? null : Number(f.serving_g) }));
 }
 
+const asEstimated = (i: { description: string; quantity: number | null; unit: string; kcal: number; protein_g: number; carbs_g: number; fat_g: number; fiber_g: number; weight_confirmed: boolean }): EstimatedItem => {
+  const c = checkKcalConsistency(i);
+  return { ...i, needs_review: !c.ok, check_expected_kcal: c.expectedKcal };
+};
+
+/**
+ * Texto livre: primeiro a tabela pessoal (instantâneo, sem IA); o que não for reconhecido vai ao Gemini.
+ * Se o Gemini falhar, devolve na mesma a tabela com linhas vazias para completar à mão.
+ */
 export async function estimateText(text: string): Promise<Result<{ items: EstimatedItem[]; comment: string }>> {
   await requireUser();
   if (!text.trim()) return fail("Escreve o que comeste.");
+  const foods = await foodsForPrompt();
+  const { matched, unmatched } = matchLocal(text.slice(0, 2000), foods);
+  const local = matched.map(asEstimated);
+  if (unmatched.length === 0) return { ok: true, data: { items: local, comment: "Valores da tua tabela de alimentos." } };
   try {
-    return { ok: true, data: await estimateFromText(text.slice(0, 2000), await foodsForPrompt()) };
+    const ai = await estimateFromText(unmatched.join(", "), foods);
+    return { ok: true, data: { items: [...local, ...ai.items], comment: local.length ? `Da tua tabela: ${local.length}; o resto foi estimado pela IA. ${ai.comment}` : ai.comment } };
   } catch (e) {
-    return fail((e as Error).message);
+    const blanks = unmatched.map((u) => asEstimated({ description: u, quantity: null, unit: "g", kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0, fiber_g: 0, weight_confirmed: true }));
+    return { ok: true, data: { items: [...local, ...blanks], comment: `${(e as Error).message} Preenche à mão as linhas a 0.` } };
   }
 }
 

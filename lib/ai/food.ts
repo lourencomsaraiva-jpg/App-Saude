@@ -95,6 +95,7 @@ async function viaGemini(parts: Array<{ text: string } | { inlineData: { mimeTyp
   if (!apiKey) throw new Error("Falta GEMINI_API_KEY (Vercel → Settings → Environment Variables).");
   const ai = new GoogleGenAI({ apiKey });
   let lastStatus = 0;
+  const tried: string[] = [];
   // Sobrecarga (503/500) ou limite (429): repete com espera e depois passa ao modelo seguinte.
   for (const model of geminiModels()) {
     for (let attempt = 0; attempt < 2; attempt++) {
@@ -115,6 +116,8 @@ async function viaGemini(parts: Array<{ text: string } | { inlineData: { mimeTyp
       } catch (e) {
         const status = e instanceof ApiError ? e.status : 0;
         lastStatus = status;
+        tried.push(`${model}: ${status || (e as Error).message.slice(0, 60)}`);
+        console.error("Gemini", model, status, (e as Error).message);
         if (status === 400 || status === 401 || status === 403) throw new Error("A chave do Gemini foi recusada. Verifica GEMINI_API_KEY na Vercel.");
         if (status === 404) break; // modelo não existe nesta conta: passa ao seguinte
         if (status === 429 || status >= 500) {
@@ -128,7 +131,7 @@ async function viaGemini(parts: Array<{ text: string } | { inlineData: { mimeTyp
   throw new Error(
     lastStatus === 429
       ? "Atingiste o limite gratuito do Gemini por agora. Tenta daqui a um minuto ou introduz à mão."
-      : "O Gemini está sobrecarregado neste momento. Tenta daqui a pouco ou introduz à mão.",
+      : `O Gemini não respondeu (${tried.join("; ")}). Tenta daqui a pouco ou introduz à mão.`,
   );
 }
 
