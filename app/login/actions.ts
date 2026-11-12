@@ -1,18 +1,33 @@
 "use server";
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { isAllowedEmail } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
-export async function sendMagicLink(_prev: { message: string; ok: boolean } | null, form: FormData) {
+export type LoginState = { step: "email" | "code"; email: string; ok: boolean; message: string } | null;
+
+/** Passo 1: envia o email com o código (e o link). */
+export async function sendCode(_prev: LoginState, form: FormData): Promise<LoginState> {
   const email = String(form.get("email") ?? "").trim().toLowerCase();
-  // Resposta igual para emails não autorizados, para não revelar qual é o email permitido.
-  const generic = { ok: true, message: "Se o email estiver autorizado, vais receber um link de entrada. Abre-o neste dispositivo." };
-  if (!email || !email.includes("@")) return { ok: false, message: "Escreve um email válido." };
-  if (!isAllowedEmail(email)) return generic;
+  if (!email || !email.includes("@")) return { step: "email", email, ok: false, message: "Escreve um email válido." };
+  // Para emails não autorizados mostra-se o mesmo ecrã, para não revelar qual é o email permitido.
+  if (!isAllowedEmail(email)) return { step: "code", email, ok: true, message: "Se o email estiver autorizado, recebes um código de entrada." };
   const h = await headers();
   const origin = h.get("origin") ?? `https://${h.get("host")}`;
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: `${origin}/auth/confirm`, shouldCreateUser: true } });
-  if (error) return { ok: false, message: `Não foi possível enviar o link: ${error.message}` };
-  return generic;
+  if (error) return { step: "email", email, ok: false, message: `Não foi possível enviar o email: ${error.message}` };
+  return { step: "code", email, ok: true, message: "Enviámos um código para o teu email. Escreve-o aqui (não precisas de abrir o link)." };
+}
+
+/** Passo 2: valida o código dentro da própria app (funciona na app instalada no ecrã principal). */
+export async function verifyCode(_prev: LoginState, form: FormData): Promise<LoginState> {
+  const email = String(form.get("email") ?? "").trim().toLowerCase();
+  const token = String(form.get("code") ?? "").replace(/\D/g, "");
+  if (token.length < 6) return { step: "code", email, ok: false, message: "O código tem pelo menos 6 algarismos." };
+  if (!isAllowedEmail(email)) return { step: "code", email, ok: false, message: "Código inválido ou expirado." };
+  const supabase = await createClient();
+  const { error } = await supabase.auth.verifyOtp({ email, token, type: "email" });
+  if (error) return { step: "code", email, ok: false, message: "Código inválido ou expirado. Pede outro." };
+  redirect("/");
 }
