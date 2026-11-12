@@ -30,14 +30,14 @@ export function DayFields(p: {
   return (
     <section className="card space-y-4">
       <div className="grid grid-cols-2 gap-3">
-        <form onSubmit={(e) => { e.preventDefault(); const v = String(new FormData(e.currentTarget).get("w") ?? ""); start(async () => done(await saveWeight(p.date, v))); }}>
+        <form key={`w-${p.date}-${p.weight}`} onSubmit={(e) => { e.preventDefault(); const v = String(new FormData(e.currentTarget).get("w") ?? ""); start(async () => done(await saveWeight(p.date, v))); }}>
           <label className="label" htmlFor="w">Peso (kg){p.weightSource ? ` · ${SRC[p.weightSource] ?? p.weightSource}` : ""}</label>
           <div className="flex gap-1">
             <input id="w" name="w" inputMode="decimal" defaultValue={p.weight ?? ""} placeholder="78,0" className="num" />
             <button className="btn btn-sm" disabled={pending}>OK</button>
           </div>
         </form>
-        <form onSubmit={(e) => { e.preventDefault(); const v = String(new FormData(e.currentTarget).get("s") ?? ""); start(async () => done(await saveDayFields(p.date, { steps: v }))); }}>
+        <form key={`s-${p.date}-${p.steps}`} onSubmit={(e) => { e.preventDefault(); const v = String(new FormData(e.currentTarget).get("s") ?? ""); start(async () => done(await saveDayFields(p.date, { steps: v }))); }}>
           <label className="label" htmlFor="s">Passos</label>
           <div className="flex gap-1">
             <input id="s" name="s" inputMode="numeric" defaultValue={p.steps ?? ""} className="num" />
@@ -46,7 +46,7 @@ export function DayFields(p: {
         </form>
       </div>
 
-      <form onSubmit={(e) => { e.preventDefault(); const f = new FormData(e.currentTarget); start(async () => done(await saveSleep(p.sleepDayDate, String(f.get("sleep") ?? ""), String(f.get("score") ?? "")))); }}>
+      <form key={`sl-${p.sleepDayDate}-${p.sleepText}-${p.sleepScore}`} onSubmit={(e) => { e.preventDefault(); const f = new FormData(e.currentTarget); start(async () => done(await saveSleep(p.sleepDayDate, String(f.get("sleep") ?? ""), String(f.get("score") ?? "")))); }}>
         <label className="label" htmlFor="sleep">
           Sono da noite de {formatDatePt(p.sleepDayDate)}{p.sleepSource ? ` · ${SRC[p.sleepSource] ?? p.sleepSource}` : ""}{p.sleepSummary ? ` · ${p.sleepSummary}` : ""}
         </label>
@@ -68,7 +68,7 @@ export function DayFields(p: {
 
       <div>
         <label className="label" htmlFor="notes">Notas do dia</label>
-        <textarea id="notes" rows={3} defaultValue={p.notes ?? ""} onBlur={(e) => { if (e.target.value !== (p.notes ?? "")) { const v = e.target.value; start(async () => done(await saveDayFields(p.date, { notes: v }), "Notas guardadas.")); } }} />
+        <textarea key={`n-${p.date}-${p.notes ?? ""}`} id="notes" rows={3} defaultValue={p.notes ?? ""} onBlur={(e) => { if (e.target.value !== (p.notes ?? "")) { const v = e.target.value; start(async () => done(await saveDayFields(p.date, { notes: v }), "Notas guardadas.")); } }} />
       </div>
       {msg && <p className={`text-sm ${msg.ok ? "text-good" : "text-bad"}`}>{msg.text}</p>}
     </section>
