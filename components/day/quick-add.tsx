@@ -8,11 +8,12 @@ import { recipeTotals } from "@/lib/calc/nutrition";
 import { MEAL_LABELS, type FoodRow, type RecipeRow } from "@/lib/types";
 import { EstimateTable, type EditableItem } from "./estimate-table";
 
-type Tab = "favoritos" | "foto" | "texto" | "igual" | "receitas";
+type Tab = "favoritos" | "foto" | "texto" | "manual" | "igual" | "receitas";
 const TABS: Array<[Tab, string]> = [
   ["favoritos", "Favoritos"],
   ["foto", "Foto"],
   ["texto", "Texto"],
+  ["manual", "Manual"],
   ["igual", "Igual a…"],
   ["receitas", "Receitas"],
 ];
@@ -42,7 +43,7 @@ export function QuickAdd({ date, foods, recipes }: { date: string; foods: FoodRo
   const [label, setLabel] = useState<string>(defaultLabel);
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
-  const [estimate, setEstimate] = useState<{ items: EditableItem[]; comment: string; source: "ai_text" | "ai_photo"; photoPath: string | null } | null>(null);
+  const [estimate, setEstimate] = useState<{ items: EditableItem[]; comment: string; source: "ai_text" | "ai_photo" | "manual"; photoPath: string | null } | null>(null);
   const [text, setText] = useState("");
   const [hint, setHint] = useState("");
   const [preview, setPreview] = useState<string | null>(null);
@@ -58,6 +59,14 @@ export function QuickAdd({ date, foods, recipes }: { date: string; foods: FoodRo
     const q = search.trim().toLowerCase();
     return q ? foods.filter((f) => f.name.toLowerCase().includes(q)) : foods.filter((f) => f.is_favorite);
   }, [foods, search]);
+
+  const manual = (description = "") =>
+    setEstimate({
+      items: [{ description, quantity: null, unit: "g", kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0, fiber_g: 0, weight_confirmed: true }],
+      comment: "Preenche os valores do rótulo ou da tua tabela. As kcal são verificadas contra 4×P + 4×H + 9×G.",
+      source: "manual",
+      photoPath: null,
+    });
 
   const run = (fn: () => Promise<{ ok: boolean; message?: string }>, okText?: string) =>
     start(async () => {
@@ -77,6 +86,8 @@ export function QuickAdd({ date, foods, recipes }: { date: string; foods: FoodRo
     });
   };
 
+  const aiFailed = msg && !msg.ok && (tab === "texto" || tab === "foto");
+
   return (
     <section className="card">
       <div className="mb-3 flex items-center justify-between gap-2">
@@ -89,7 +100,7 @@ export function QuickAdd({ date, foods, recipes }: { date: string; foods: FoodRo
       </div>
       <div className="-mx-1 mb-3 flex gap-1 overflow-x-auto pb-1">
         {TABS.map(([t, txt]) => (
-          <button key={t} type="button" onClick={() => { setTab(t); setEstimate(null); setMsg(null); }} className={`btn btn-sm shrink-0 ${tab === t ? "" : "btn-ghost"}`}>
+          <button key={t} type="button" onClick={() => { setTab(t); setMsg(null); if (t === "manual") manual(); else setEstimate(null); }} className={`btn btn-sm shrink-0 ${tab === t ? "" : "btn-ghost"}`}>
             {txt}
           </button>
         ))}
@@ -167,6 +178,8 @@ export function QuickAdd({ date, foods, recipes }: { date: string; foods: FoodRo
             {pending ? "A estimar…" : "Estimar"}
           </button>
         </div>
+      ) : tab === "manual" ? (
+        <button type="button" className="btn w-full" onClick={() => manual()}>+ Adicionar alimento à mão</button>
       ) : tab === "igual" ? (
         <div className="space-y-2">
           <div className="flex gap-2">
@@ -204,6 +217,11 @@ export function QuickAdd({ date, foods, recipes }: { date: string; foods: FoodRo
         </div>
       )}
       {msg && <p className={`mt-3 text-sm ${msg.ok ? "text-good" : "text-bad"}`}>{msg.text}</p>}
+      {aiFailed && !estimate && (
+        <button type="button" className="btn btn-ghost btn-sm mt-2" onClick={() => { setMsg(null); manual(tab === "texto" ? text : hint); }}>
+          Introduzir à mão
+        </button>
+      )}
     </section>
   );
 }

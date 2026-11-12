@@ -6,7 +6,7 @@
 import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
-import { GoogleGenAI } from "@google/genai";
+import { ApiError, GoogleGenAI } from "@google/genai";
 import { z } from "zod";
 import { round1 } from "../calc/numbers";
 import { checkKcalConsistency } from "../calc/nutrition";
@@ -78,23 +78,58 @@ function provider(): "gemini" | "anthropic" {
   return p === "anthropic" ? "anthropic" : "gemini";
 }
 
+/** Modelos a tentar, por ordem: GEMINI_MODEL, depois GEMINI_FALLBACK_MODELS (separados por vírgulas). */
+function geminiModels(): string[] {
+  const main = process.env.GEMINI_MODEL?.trim() || "gemini-3.8-flash";
+  const fallbacks = (process.env.GEMINI_FALLBACK_MODELS ?? "gemini-flash-latest,gemini-flash-lite-latest")
+    .split(",")
+    .map((m) => m.trim())
+    .filter(Boolean);
+  return [...new Set([main, ...fallbacks])];
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 async function viaGemini(parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }>, system: string): Promise<FoodEstimate> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("Falta GEMINI_API_KEY (Vercel → Settings → Environment Variables).");
   const ai = new GoogleGenAI({ apiKey });
-  const res = await ai.models.generateContent({
-    model: process.env.GEMINI_MODEL || "gemini-3.8-flash",
-    contents: [{ role: "user", parts }],
-    config: {
-      systemInstruction: system,
-      responseMimeType: "application/json",
-      responseJsonSchema: z.toJSONSchema(FoodEstimateSchema),
-      temperature: 0.2,
-    },
-  });
-  const text = res.text;
-  if (!text) throw new Error("O Gemini não devolveu resposta.");
-  return FoodEstimateSchema.parse(JSON.parse(text));
+  let lastStatus = 0;
+  // Sobrecarga (503/500) ou limite (429): repete com espera e depois passa ao modelo seguinte.
+  for (const model of geminiModels()) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const res = await ai.models.generateContent({
+          model,
+          contents: [{ role: "user", parts }],
+          config: {
+            systemInstruction: system,
+            responseMimeType: "application/json",
+            responseJsonSchema: z.toJSONSchema(FoodEstimateSchema),
+            temperature: 0.2,
+          },
+        });
+        const text = res.text;
+        if (!text) throw new Error("O Gemini não devolveu resposta.");
+        return FoodEstimateSchema.parse(JSON.parse(text));
+      } catch (e) {
+        const status = e instanceof ApiError ? e.status : 0;
+        lastStatus = status;
+        if (status === 400 || status === 401 || status === 403) throw new Error("A chave do Gemini foi recusada. Verifica GEMINI_API_KEY na Vercel.");
+        if (status === 404) break; // modelo não existe nesta conta: passa ao seguinte
+        if (status === 429 || status >= 500) {
+          if (attempt === 0) await sleep(1500);
+          continue;
+        }
+        throw new Error("A estimativa veio num formato inválido. Tenta outra vez ou introduz à mão.");
+      }
+    }
+  }
+  throw new Error(
+    lastStatus === 429
+      ? "Atingiste o limite gratuito do Gemini por agora. Tenta daqui a um minuto ou introduz à mão."
+      : "O Gemini está sobrecarregado neste momento. Tenta daqui a pouco ou introduz à mão.",
+  );
 }
 
 async function viaAnthropic(content: Anthropic.ContentBlockParam[], system: string): Promise<FoodEstimate> {

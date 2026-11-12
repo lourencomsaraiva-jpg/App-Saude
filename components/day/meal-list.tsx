@@ -38,7 +38,7 @@ function Meal({ meal }: { meal: MealRow & { photo_url: string | null } }) {
       {menu && (
         <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg bg-soft p-2 text-sm">
           <select defaultValue={meal.label} onChange={(e) => start(async () => { await moveMeal(meal.id, e.target.value); })} className="!w-auto !py-1">
-            {MEAL_LABELS.map((l) => <option key={l}>{l}</option>)}
+            {(MEAL_LABELS.includes(meal.label) ? MEAL_LABELS : [meal.label, ...MEAL_LABELS]).map((l) => <option key={l}>{l}</option>)}
           </select>
           <button className="btn btn-ghost btn-sm" onClick={() => { const name = prompt("Nome do favorito:"); if (name) start(async () => { const r = await mealToFavorite(meal.id, name); alert(r.ok ? r.message : r.message); }); }}>Guardar como favorito</button>
           <button className="btn btn-danger btn-sm" onClick={() => confirm("Apagar a refeição inteira?") && start(async () => { await deleteMeal(meal.id); })}>Apagar refeição</button>
