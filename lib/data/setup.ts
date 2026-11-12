@@ -7,10 +7,16 @@ import { DEFAULT_FAVORITE_MEALS, DEFAULT_FOODS, DEFAULT_PHASES, DEFAULT_PROFILE,
 import { generatePlan } from "../plan/generate";
 import type { DB } from "../types";
 
+const readyUsers = new Set<string>();
+
 export async function ensureSetup(db: DB, userId: string): Promise<{ created: boolean }> {
+  if (readyUsers.has(userId)) return { created: false };
   const { data: existing, error } = await db.from("profile").select("id").eq("user_id", userId).maybeSingle();
   if (error) throw new Error(`Perfil: ${error.message}`);
-  if (existing) return { created: false };
+  if (existing) {
+    readyUsers.add(userId);
+    return { created: false };
+  }
 
   const must = async <T>(p: PromiseLike<{ data: T; error: { message: string } | null }>, what: string): Promise<T> => {
     const r = await p;
@@ -85,5 +91,6 @@ export async function ensureSetup(db: DB, userId: string): Promise<{ created: bo
     ),
     "Treinos planeados",
   );
+  readyUsers.add(userId);
   return { created: true };
 }

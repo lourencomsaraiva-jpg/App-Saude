@@ -1,22 +1,25 @@
 "use client";
-import { useState, useTransition } from "react";
-import { syncNow } from "@/app/(app)/actions";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { requestSync } from "@/lib/sync/client";
 
 export function SyncButton({ compact = false }: { compact?: boolean }) {
-  const [pending, start] = useTransition();
+  const [pending, setPending] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const router = useRouter();
   return (
     <span className="inline-flex items-center gap-2">
       <button
         className={`btn btn-ghost ${compact ? "btn-sm" : ""}`}
         disabled={pending}
-        onClick={() =>
-          start(async () => {
-            const r = await syncNow("manual");
-            setMsg(r.ok ? `${r.data?.imported ?? 0} registos${r.data?.errors.length ? ` · ${r.data.errors.length} avisos` : ""}` : r.message);
-            setTimeout(() => setMsg(null), 6000);
-          })
-        }
+        onClick={async () => {
+          setPending(true);
+          const r = await requestSync("manual");
+          setPending(false);
+          setMsg(r.ok ? `${r.imported} registos${r.errors.length ? ` · ${r.errors.length} avisos` : ""}` : r.errors[0] ?? "Erro");
+          router.refresh();
+          setTimeout(() => setMsg(null), 6000);
+        }}
         aria-label="Sincronizar agora"
       >
         <svg viewBox="0 0 24 24" className={`h-4 w-4 ${pending ? "animate-spin" : ""}`} fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>

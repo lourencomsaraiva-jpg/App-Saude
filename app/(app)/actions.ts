@@ -14,7 +14,6 @@ import { parseSleepText, validateSleep } from "@/lib/calc/sleep";
 import { importSeed, type SeedEntry } from "@/lib/import/seed";
 import { parseFit } from "@/lib/integrations/fit";
 import { intervalsConfigFromEnv } from "@/lib/integrations/intervals";
-import { syncIntervals } from "@/lib/sync/intervals-sync";
 import { linkActivitiesToPlan } from "@/lib/sync/link-plan";
 import { MEAL_LABELS, type FoodRow, type MealLabel } from "@/lib/types";
 
@@ -444,27 +443,6 @@ export async function uploadFit(form: FormData): Promise<Result<{ id: string }>>
     if (log) await supabase.from("sync_log").update({ status: "error", finished_at: new Date().toISOString(), error: (e as Error).message }).eq("id", log.id);
     return fail(`Não foi possível ler o FIT: ${(e as Error).message}`);
   }
-}
-
-// ------------------------------------------------------------------ sincronização
-export async function syncNow(trigger: "manual" | "open" = "manual", backfillDays?: number): Promise<Result<{ imported: number; errors: string[] }>> {
-  const { supabase, user } = await requireUser();
-  const cfg = intervalsConfigFromEnv();
-  if (!cfg) return fail("Intervals.icu não configurado (INTERVALS_ATHLETE_ID e INTERVALS_API_KEY na Vercel).");
-  if (trigger === "open") {
-    const { data: last } = await supabase.from("sync_log").select("started_at").eq("source", "intervals").order("started_at", { ascending: false }).limit(1).maybeSingle();
-    if (last && Date.now() - new Date(last.started_at).getTime() < 20 * 60_000) return { ok: true, data: { imported: 0, errors: [] }, message: "recente" };
-  }
-  const today = todayInTz();
-  const oldest = backfillDays ? new Date(Date.parse(today) - backfillDays * 86_400_000).toISOString().slice(0, 10) : undefined;
-  const res = await syncIntervals(supabase, user.id, cfg, { trigger, oldest, detailLimit: backfillDays ? 8 : 4 });
-  // Análise automática curta dos treinos de corrida novos (máx. 2 por sincronização).
-  if (process.env.ANTHROPIC_API_KEY && res.newActivityIds.length) {
-    const { data: runs } = await supabase.from("activities").select("id").in("id", res.newActivityIds).eq("type", "corrida").is("ai_analysis", null).limit(2);
-    for (const r of runs ?? []) await analyzeActivity(supabase, user.id, r.id).catch(() => {});
-  }
-  refresh();
-  return res.ok ? { ok: true, data: { imported: res.imported, errors: res.errors } } : fail(res.errors.join("; "));
 }
 
 // ------------------------------------------------------------------ plano

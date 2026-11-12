@@ -1,6 +1,8 @@
 "use client";
 import { useState, useTransition } from "react";
-import { deletePhase, deleteRace, importSeedFile, probeWellness, savePhase, saveProfile, saveRace, setPassword, syncNow } from "../actions";
+import { deletePhase, deleteRace, importSeedFile, probeWellness, savePhase, saveProfile, saveRace, setPassword } from "../actions";
+import { requestSync } from "@/lib/sync/client";
+import { useRouter } from "next/navigation";
 
 type V = Record<string, string | number | null>;
 const F = ({ name, label, v, type = "text", hint }: { name: string; label: string; v: V; type?: string; hint?: string }) => (
@@ -110,11 +112,12 @@ export function ImportSeed() {
 }
 
 export function Backfill() {
-  const [pending, start] = useTransition();
+  const [pending, setPending] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const router = useRouter();
   return (
     <span className="inline-flex flex-col gap-1">
-      <button className="btn btn-ghost btn-sm" disabled={pending} onClick={() => start(async () => { const r = await syncNow("manual", 120); setMsg(r.ok ? `${r.data?.imported ?? 0} registos (últimos 120 dias)` : r.message); })}>
+      <button className="btn btn-ghost btn-sm" disabled={pending} onClick={async () => { setPending(true); const r = await requestSync("manual", 120); setPending(false); setMsg(r.ok ? `${r.imported} registos (últimos 120 dias)${r.errors.length ? ` · avisos: ${r.errors[0]}` : ""}` : r.errors[0] ?? "Erro"); router.refresh(); }}>
         {pending ? "A importar histórico…" : "Importar histórico do Intervals (120 dias)"}
       </button>
       {msg && <span className="text-xs text-muted">{msg}</span>}

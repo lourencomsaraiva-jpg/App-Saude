@@ -8,20 +8,28 @@ export function isAllowedEmail(email: string | null | undefined): boolean {
   return !!allowed && !!email && email.trim().toLowerCase() === allowed;
 }
 
+/**
+ * Lê a sessão com getClaims(): valida o JWT localmente (sem ida ao servidor de Auth quando o projeto
+ * usa chaves de assinatura assimétricas), o que poupa uma ida e volta ao Supabase em cada pedido.
+ */
+async function currentUser() {
+  const supabase = await createClient();
+  const { data } = await supabase.auth.getClaims();
+  const claims = data?.claims;
+  const email = typeof claims?.email === "string" ? claims.email : null;
+  if (!claims?.sub || !isAllowedEmail(email)) return { supabase, user: null };
+  return { supabase, user: { id: claims.sub, email } };
+}
+
 /** Utilizador autenticado e autorizado + cliente Supabase (RLS). Redireciona para /login caso contrário. */
 export const requireUser = cache(async () => {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
-  const user = data.user;
-  if (!user || !isAllowedEmail(user.email)) redirect("/login");
+  const { supabase, user } = await currentUser();
+  if (!user) redirect("/login");
   return { supabase, user };
 });
 
 /** Versão para route handlers: devolve null em vez de redirecionar. */
 export async function getApiUser() {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
-  const user = data.user;
-  if (!user || !isAllowedEmail(user.email)) return null;
-  return { supabase, user };
+  const { supabase, user } = await currentUser();
+  return user ? { supabase, user } : null;
 }

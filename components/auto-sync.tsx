@@ -1,24 +1,19 @@
 "use client";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { syncNow } from "@/app/(app)/actions";
+import { requestSync } from "@/lib/sync/client";
 
-/** Sincroniza ao abrir a app (no máximo uma vez a cada 20 min, controlado no servidor). */
+/** Sincroniza ao abrir a app, em segundo plano (no máximo uma vez a cada 20 min, controlado no servidor). */
 export function AutoSync() {
   const router = useRouter();
   useEffect(() => {
-    let key = "auto-sync";
     try {
-      if (sessionStorage.getItem(key)) return;
-      sessionStorage.setItem(key, "1");
-    } catch {
-      key = "";
-    }
-    syncNow("open")
-      .then((r) => {
-        if (r.ok && r.data && r.data.imported > 0) router.refresh();
-      })
-      .catch(() => {});
+      if (sessionStorage.getItem("auto-sync")) return;
+      sessionStorage.setItem("auto-sync", "1");
+    } catch {}
+    requestSync("open").then((r) => {
+      if (r.ok && r.imported > 0) router.refresh();
+    });
   }, [router]);
   return null;
 }
