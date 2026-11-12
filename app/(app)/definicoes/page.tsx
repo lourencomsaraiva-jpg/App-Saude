@@ -19,7 +19,8 @@ export default async function DefinicoesPage() {
   const p = settings.profile!;
   const intervalsOk = !!process.env.INTERVALS_ATHLETE_ID && !!process.env.INTERVALS_API_KEY;
   const lastOk = (logs ?? []).find((l) => l.source === "intervals" && (l.status === "ok" || l.status === "partial"));
-  const lastErr = (logs ?? []).find((l) => l.error);
+  const lastIntervals = (logs ?? []).find((l) => l.source === "intervals");
+  const lastErr = lastIntervals?.error ? lastIntervals : null;
   const t = (s: number | null) => (s ? formatDuration(s) : "");
   const pace = (s: number | null) => (s ? formatPace(s / 60) : "");
 
