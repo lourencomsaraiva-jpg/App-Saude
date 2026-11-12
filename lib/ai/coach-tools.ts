@@ -168,7 +168,7 @@ export async function runCoachTool(name: string, input: Json, ctx: ToolContext):
     }
     case "get_meals": {
       if (!isISODate(input.date)) return { error: "date inválida" };
-      const { data } = await db.from("meals").select("label, eaten_at, notes, meal_items(description, quantity, unit, kcal, protein_g, carbs_g, fat_g, fiber_g, weight_confirmed, needs_review, source)").eq("user_id", userId).eq("date", input.date);
+      const { data } = await db.from("meals").select("id, label, eaten_at, notes, meal_items(id, description, quantity, unit, kcal, protein_g, carbs_g, fat_g, fiber_g, weight_confirmed, needs_review, source)").eq("user_id", userId).eq("date", input.date);
       return data ?? [];
     }
     case "get_activities": {
