@@ -1,6 +1,7 @@
 "use client";
 import { useState, useTransition } from "react";
-import { addWorkout, deleteWorkout, saveStrengthExercise, updateWorkout } from "../actions";
+import { addWorkout, deleteWorkout, saveStrengthExercise, sendWorkoutToGarmin, updateWorkout } from "../actions";
+import { todayInTz } from "@/lib/calc/dates";
 import { formatPace, parseDurationHms } from "@/lib/calc/running";
 import { parseDecimal } from "@/lib/calc/numbers";
 import type { PlannedWorkoutRow, StrengthSessionRow } from "@/lib/types";
@@ -54,6 +55,14 @@ export function WorkoutEditor({ workout }: { workout: PlannedWorkoutRow }) {
     <div className="mt-1">
       <div className="flex flex-wrap items-center gap-2">
         <button className="text-xs text-accent" onClick={() => setOpen((v) => !v)}>{open ? "Fechar" : "Editar / mover"}</button>
+        {["fácil", "qualidade", "longo", "prova", "recuperação"].includes(workout.type) && workout.distance_km && (
+          <>
+            <button className="text-xs text-accent" disabled={pending} onClick={() => start(async () => { const r = await sendWorkoutToGarmin(workout.id); setErr(r.ok ? r.message ?? "Enviado." : r.message); })}>Enviar para o Garmin</button>
+            {workout.date !== todayInTz() && (
+              <button className="text-xs text-muted underline" disabled={pending} onClick={() => start(async () => { const r = await sendWorkoutToGarmin(workout.id, todayInTz()); setErr(r.ok ? `${r.message} Teste para hoje.` : r.message); })}>Enviar para hoje (teste)</button>
+            )}
+          </>
+        )}
         <select className="!w-auto !py-0.5 text-xs" value={workout.status} onChange={(e) => { const s = e.target.value; start(async () => { const r = await updateWorkout(workout.id, { status: s }, `Estado → ${s}`); setErr(r.ok ? null : r.message); }); }} aria-label="Estado">
           {STATUS.map((s) => <option key={s}>{s}</option>)}
         </select>
@@ -69,7 +78,7 @@ export function WorkoutEditor({ workout }: { workout: PlannedWorkoutRow }) {
           <button className="btn btn-danger btn-sm mt-2" disabled={pending} onClick={() => { const reason = prompt("Motivo para remover?"); if (reason) start(async () => { const r = await deleteWorkout(workout.id, reason); setErr(r.ok ? null : r.message); }); }}>Remover treino</button>
         </>
       )}
-      {err && <p className="text-xs text-bad">{err}</p>}
+      {err && <p className={`text-xs ${/^Enviado/.test(err) ? "text-good" : "text-bad"}`}>{err}</p>}
     </div>
   );
 }

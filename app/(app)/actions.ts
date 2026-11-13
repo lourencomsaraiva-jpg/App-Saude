@@ -715,3 +715,15 @@ export async function setPassword(form: FormData): Promise<Result> {
   if (error) return fail(`Não foi possível guardar: ${error.message}`);
   return { ok: true, message: "Password guardada. A partir de agora entras com email + password." };
 }
+
+/** Envia um treino do plano para o Intervals.icu → Garmin (opcionalmente para outra data, ex.: teste hoje). */
+export async function sendWorkoutToGarmin(workoutId: string, date?: string): Promise<Result<{ date: string; description: string }>> {
+  const { supabase, user } = await requireUser();
+  try {
+    const { sendPlannedWorkout } = await import("@/lib/integrations/send-workout");
+    const r = await sendPlannedWorkout(supabase, user.id, workoutId, date);
+    return { ok: true, data: { date: r.date, description: r.description }, message: `Enviado para o Intervals.icu (${r.date}).` };
+  } catch (e) {
+    return fail((e as Error).message);
+  }
+}

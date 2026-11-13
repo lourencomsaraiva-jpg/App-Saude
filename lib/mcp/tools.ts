@@ -39,6 +39,12 @@ const itemSchema = {
 
 export const WRITE_TOOLS: ToolDef[] = [
   {
+    name: "send_workout_to_garmin",
+    description:
+      "Envia um treino de corrida planeado (id de get_plan) para o calendário do Intervals.icu, que o passa ao Garmin Connect/relógio. 'date' opcional para enviar noutro dia (ex.: teste hoje). Reenviar não duplica.",
+    inputSchema: { type: "object", properties: { workout_id: { type: "string" }, date: { type: "string", description: "YYYY-MM-DD (por omissão, a data do treino)" } }, required: ["workout_id"] },
+  },
+  {
     name: "search_foods",
     description: "Procura na tabela pessoal de alimentos (valores por dose) e nas refeições favoritas/receitas. Usa estes valores sempre que o alimento existir.",
     inputSchema: { type: "object", properties: { query: { type: "string" } } },
@@ -120,6 +126,10 @@ export async function callTool(db: DB, userId: string, name: string, args: Json)
   const date = isISODate(args.date) ? args.date : todayInTz();
 
   switch (name) {
+    case "send_workout_to_garmin": {
+      const { sendPlannedWorkout } = await import("../integrations/send-workout");
+      return sendPlannedWorkout(db, userId, String(args.workout_id ?? ""), isISODate(args.date) ? args.date : undefined);
+    }
     case "search_foods": {
       const q = String(args.query ?? "").trim();
       let fq = db.from("foods").select("id, name, serving, serving_g, kcal, protein_g, carbs_g, fat_g, fiber_g, is_favorite").eq("user_id", userId).order("name");

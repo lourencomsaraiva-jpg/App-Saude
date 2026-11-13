@@ -34,6 +34,42 @@ async function get<T>(cfg: IntervalsConfig, path: string): Promise<T> {
   return (await res.json()) as T;
 }
 
+async function send<T>(cfg: IntervalsConfig, path: string, body: unknown): Promise<T> {
+  const auth = Buffer.from(`API_KEY:${cfg.apiKey}`).toString("base64");
+  const res = await fetch(`${BASE}${path}`, {
+    method: "POST",
+    headers: { Authorization: `Basic ${auth}`, Accept: "application/json", "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(25_000),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    const detail = (await res.text().catch(() => "")).slice(0, 200);
+    throw new Error(`Intervals.icu ${res.status} ao enviar treino${detail ? `: ${detail}` : ""}`);
+  }
+  return (await res.json()) as T;
+}
+
+/**
+ * Cria/atualiza um treino planeado no calendário do Intervals.icu (que o envia ao Garmin, se essa opção
+ * estiver ativa em Settings → Garmin no Intervals). external_id evita duplicados ao reenviar.
+ */
+export async function upsertWorkoutEvent(cfg: IntervalsConfig, ev: { date: string; name: string; description: string; externalId: string; distanceKm?: number | null }) {
+  const body = [
+    {
+      category: "WORKOUT",
+      type: "Run",
+      start_date_local: `${ev.date}T00:00:00`,
+      name: ev.name,
+      description: ev.description,
+      external_id: ev.externalId,
+      ...(ev.distanceKm ? { distance: Math.round(ev.distanceKm * 1000) } : {}),
+    },
+  ];
+  const out = await send<Array<{ id: number | string; start_date_local?: string; name?: string }>>(cfg, `/athlete/${cfg.athleteId}/events/bulk?upsert=true`, body);
+  return out[0] ?? null;
+}
+
 // --------------------------------------------------------------------- tipos (parciais)
 export type IcuActivity = Record<string, unknown> & {
   id: string | number;
