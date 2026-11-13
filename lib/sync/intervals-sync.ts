@@ -53,10 +53,24 @@ export async function syncIntervals(
       const dates = [...new Set(ups.map((u) => u.local_date))];
       await db.from("activities").delete().eq("user_id", userId).eq("source", "seed").in("local_date", dates);
 
-      // Voltas e parciais por km (só para atividades novas ou sem parciais; limitado por execução).
-      const { data: withLaps } = await db.from("activity_laps").select("activity_id").in("activity_id", ups.map((u) => u.id));
+    }
+
+    // ------------------------------------------------ voltas e parciais por km
+    // Atividades desta janela sem parciais + atividades antigas ainda por completar (limitado por execução).
+    {
+      const DETAIL_TYPES = ["corrida", "bicicleta", "caminhada"];
+      const { data: candidates } = await db
+        .from("activities")
+        .select("id, external_id, type, raw")
+        .eq("user_id", userId)
+        .eq("source", "intervals")
+        .in("type", DETAIL_TYPES)
+        .order("local_date", { ascending: false })
+        .limit(200);
+      const list = (candidates ?? []) as Array<{ id: string; external_id: string; type: string; raw: Record<string, unknown> | null }>;
+      const { data: withLaps } = list.length ? await db.from("activity_laps").select("activity_id").in("activity_id", list.map((c) => c.id)) : { data: [] };
       const hasLaps = new Set((withLaps ?? []).map((l: { activity_id: string }) => l.activity_id));
-      const needDetail = ups.filter((u) => !hasLaps.has(u.id) && (u.type === "corrida" || u.type === "bicicleta" || u.type === "caminhada")).slice(0, opts.detailLimit ?? 4);
+      const needDetail = list.filter((c) => !hasLaps.has(c.id) && !c.raw?._detail_tried).slice(0, opts.detailLimit ?? 4);
       for (const u of needDetail) {
         try {
           const d = await fetchActivityDetail(cfg, u.external_id);
@@ -69,6 +83,8 @@ export async function syncIntervals(
         } catch (e) {
           errors.push(`Detalhe ${u.external_id}: ${(e as Error).message}`);
         }
+        // não voltar a tentar indefinidamente atividades sem dados de voltas
+        await db.from("activities").update({ raw: { ...(u.raw ?? {}), _detail_tried: true } }).eq("id", u.id);
       }
     }
 
