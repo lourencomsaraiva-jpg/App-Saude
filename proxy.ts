@@ -26,6 +26,8 @@ function configProblems(env: Record<string, string | undefined>): string[] {
 }
 
 export async function proxy(request: NextRequest) {
+  // Descoberta OAuth dos clientes MCP (claude.ai): não usamos OAuth — o acesso é pela chave no URL do conector.
+  if (request.nextUrl.pathname.startsWith("/.well-known/")) return NextResponse.json({ error: "not_found" }, { status: 404 });
   const problems = configProblems({
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY),
