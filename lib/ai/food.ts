@@ -90,6 +90,34 @@ function geminiModels(): string[] {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/**
+ * Modelos "flash" que a chave consegue usar agora (a lista do Google muda: nomes antigos passam a dar 404).
+ * Guardado em memória durante 6 h.
+ */
+let discovered: { at: number; models: string[] } | null = null;
+async function discoverFlashModels(ai: GoogleGenAI): Promise<string[]> {
+  if (discovered && Date.now() - discovered.at < 6 * 3600_000) return discovered.models;
+  const names: string[] = [];
+  try {
+    const pager = await ai.models.list({ config: { pageSize: 100 } });
+    for await (const m of pager) {
+      const name = (m.name ?? "").replace(/^models\//, "");
+      const actions = m.supportedActions ?? [];
+      if (!/flash/.test(name) || !actions.includes("generateContent")) continue;
+      if (/image|tts|audio|live|embed|thinking-exp|exp-|preview-0[0-9]-/.test(name)) continue;
+      names.push(name);
+    }
+  } catch (e) {
+    console.error("Gemini list models", (e as Error).message);
+  }
+  // mais recentes primeiro; estáveis antes de preview; flash antes de flash-lite
+  const ver = (n: string) => Number(n.match(/gemini-(\d+(?:\.\d+)?)/)?.[1] ?? 0);
+  const score = (n: string) => ver(n) * 10 - (/preview/.test(n) ? 2 : 0) - (/lite/.test(n) ? 1 : 0);
+  const models = [...new Set(names)].sort((a, b) => score(b) - score(a)).slice(0, 4);
+  discovered = { at: Date.now(), models };
+  return models;
+}
+
 async function viaGemini(parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }>, system: string): Promise<FoodEstimate> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("Falta GEMINI_API_KEY (Vercel → Settings → Environment Variables).");
@@ -111,7 +139,10 @@ async function viaGemini(parts: Array<{ text: string } | { inlineData: { mimeTyp
         abortSignal: AbortSignal.timeout(20_000),
       },
     });
-  for (const model of geminiModels()) {
+  const queue = geminiModels();
+  let expanded = false;
+  for (let qi = 0; qi < queue.length; qi++) {
+    const model = queue[qi];
     let fastThinking = true;
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
@@ -137,6 +168,11 @@ async function viaGemini(parts: Array<{ text: string } | { inlineData: { mimeTyp
         if ((e as Error).name === "TimeoutError" || /abort/i.test((e as Error).message)) break; // demasiado lento: modelo seguinte
         throw new Error("A estimativa veio num formato inválido. Tenta outra vez ou introduz à mão.");
       }
+    }
+    // chegou ao fim da lista configurada: junta os modelos que a chave tem disponíveis agora
+    if (qi === queue.length - 1 && !expanded) {
+      expanded = true;
+      for (const m of await discoverFlashModels(ai)) if (!queue.includes(m)) queue.push(m);
     }
   }
   throw new Error(
