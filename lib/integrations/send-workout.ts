@@ -14,7 +14,14 @@ export async function sendPlannedWorkout(db: DB, userId: string, workoutId: stri
   const w = data as PlannedWorkoutRow;
   if (!RUN_TYPES.includes(w.type)) throw new Error("Só treinos de corrida podem ser enviados para o Garmin.");
   const date = dateOverride && isISODate(dateOverride) ? dateOverride : w.date;
-  const { name, description } = toIntervalsWorkout(w.title, w.structure ?? []);
+  let { name, description } = toIntervalsWorkout(w.title, w.structure ?? []);
+  if (w.type === "prova" && w.distance_km) {
+    // prova: distância completa ao ritmo-alvo da prova
+    const p = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+    const pace = w.target_pace_min_s && w.target_pace_max_s ? `${p(w.target_pace_max_s)}-${p(w.target_pace_min_s)}/km Pace` : "Z4 Pace";
+    name = w.title;
+    description = ["Aquecimento", "- 10m 6:15-5:55/km Pace", "", "Prova", `- ${w.distance_km}km ${pace}`].join("\n");
+  }
   const label = date !== w.date ? `${name} (teste)` : name;
   // external_id inclui a data: o envio de teste para outro dia não substitui o treino do dia certo
   const ev = await upsertWorkoutEvent(cfg, { date, name: label, description, externalId: `app-${w.id}-${date}`, distanceKm: w.distance_km });
