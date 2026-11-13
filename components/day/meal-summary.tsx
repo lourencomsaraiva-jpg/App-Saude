@@ -1,6 +1,7 @@
 "use client";
 import type { MealSaved } from "@/app/(app)/actions";
 import { fmt } from "@/lib/calc/numbers";
+import { ClaudeLink } from "@/components/claude/claude-link";
 
 const COLS = [
   ["kcal", "kcal", 0],
@@ -70,10 +71,10 @@ export function MealSummary({ s, onClose, hideClaude = false }: { s: MealSaved; 
         </div>
         <p className="mt-1 text-[11px] text-muted">Valores negativos em &quot;Falta&quot; = excedido.</p>
       </div>
-      {!hideClaude && <a href={`https://claude.ai/new?q=${encodeURIComponent(prompt)}`} target="_blank" rel="noopener noreferrer" className="block rounded-xl border border-line bg-soft p-3 text-sm">
+      {!hideClaude && <ClaudeLink prompt={prompt} className="block rounded-xl border border-line bg-soft p-3 text-sm">
         <span className="font-semibold">Comentar com o Claude ↗</span>
         <span className="mt-0.5 block text-xs text-muted">Abre o teu chat com esta tabela para ele comentar e sugerir o resto do dia.</span>
-      </a>}
+      </ClaudeLink>}
     </div>
   );
 }

@@ -2,6 +2,7 @@
 import { useState } from "react";
 import type { MealSaved } from "@/app/(app)/actions";
 import { MealSummary } from "./meal-summary";
+import { ClaudeLink } from "@/components/claude/claude-link";
 
 /** Cartão "Treinador": comentário à última atualização + plano até ao fim do dia. */
 export function CoachCard({ seen, foodPlan, foodAfter, training, numbers, prompt }: { seen: string[]; foodPlan: string[]; foodAfter: string | null; training: string[]; numbers: MealSaved | null; prompt: string }) {
@@ -25,7 +26,7 @@ export function CoachCard({ seen, foodPlan, foodAfter, training, numbers, prompt
       </div>
       <div className="flex flex-wrap gap-2">
         {numbers && <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowNumbers((v) => !v)}>{showNumbers ? "Esconder números" : "Ver números"}</button>}
-        <a href={`https://claude.ai/new?q=${encodeURIComponent(prompt)}`} target="_blank" rel="noopener noreferrer" className="btn btn-ghost btn-sm">Falar mais com o Claude ↗</a>
+        <ClaudeLink prompt={prompt} className="btn btn-ghost btn-sm">Falar mais com o Claude ↗</ClaudeLink>
       </div>
       {showNumbers && numbers && <MealSummary s={numbers} onClose={() => setShowNumbers(false)} hideClaude />}
     </section>
