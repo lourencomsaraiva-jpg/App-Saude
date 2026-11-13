@@ -1,6 +1,6 @@
 "use client";
 import { useState, useTransition } from "react";
-import { deleteFood, deleteRecipe, saveFood, saveRecipe, toggleFavoriteFood, type ItemInput } from "../actions";
+import { deleteFood, deleteRecipe, learnFromHistory, saveFood, saveRecipe, toggleFavoriteFood, type ItemInput } from "../actions";
 import { fmt, parseDecimal, parseMultiplier } from "@/lib/calc/numbers";
 import { recipeTotals, scaleNutrients } from "@/lib/calc/nutrition";
 import { MEAL_LABELS, type FoodRow, type RecipeRow } from "@/lib/types";
@@ -23,7 +23,11 @@ export function FoodList({ foods }: { foods: FoodRow[] }) {
           </li>
         ))}
       </ul>
-      <button className="btn btn-ghost btn-sm mt-2" onClick={() => setEdit("new")}>+ Alimento</button>
+      <div className="mt-2 flex flex-wrap gap-2">
+        <button className="btn btn-ghost btn-sm" onClick={() => setEdit("new")}>+ Alimento</button>
+        <button className="btn btn-ghost btn-sm" disabled={pending} onClick={() => start(async () => { const r = await learnFromHistory(); setErr(r.ok ? r.message ?? null : r.message); })}>Adicionar alimentos já registados</button>
+      </div>
+      {err && !edit && <p className="mt-2 text-xs text-muted">{err}</p>}
       {edit && (
         <form
           key={f?.id ?? "new"}

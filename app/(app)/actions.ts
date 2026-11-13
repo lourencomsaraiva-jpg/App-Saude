@@ -760,3 +760,19 @@ export async function sendPaceFormatTest(): Promise<Result> {
     return fail((e as Error).message);
   }
 }
+
+/** Acrescenta aos favoritos os alimentos já registados (estimados ou à mão) que ainda não estão na tabela. */
+export async function learnFromHistory(): Promise<Result> {
+  const { supabase, user } = await requireUser();
+  const { data } = await supabase
+    .from("meal_items")
+    .select("description, quantity, unit, kcal, protein_g, carbs_g, fat_g, fiber_g, created_at")
+    .in("source", ["ai_text", "ai_photo", "manual"])
+    .is("food_id", null)
+    .order("created_at", { ascending: false })
+    .limit(500);
+  const { learnFoods } = await import("@/lib/food/learn");
+  const learned = await learnFoods(supabase, user.id, (data ?? []).map((r) => ({ ...r, kcal: Number(r.kcal), quantity: r.quantity === null ? null : Number(r.quantity) })));
+  refresh();
+  return { ok: true, message: learned.length ? `Adicionados aos favoritos: ${learned.join(", ")}.` : "Nada de novo para adicionar." };
+}
