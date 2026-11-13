@@ -26,7 +26,7 @@ export function summaryText(s: MealSaved) {
 }
 
 /** Cartão mostrado logo depois de gravar uma refeição + caixa para comentar com o Claude. */
-export function MealSummary({ s, onClose }: { s: MealSaved; onClose: () => void }) {
+export function MealSummary({ s, onClose, hideClaude = false }: { s: MealSaved; onClose: () => void; hideClaude?: boolean }) {
   const t = s.target;
   const cell = (v: number | null, d: number, neg = false) => (
     <td className={`whitespace-nowrap px-0.5 py-1 text-right ${neg && v !== null && v < 0 ? "text-bad" : ""}`}>{fmt(v, d)}</td>
@@ -70,10 +70,10 @@ export function MealSummary({ s, onClose }: { s: MealSaved; onClose: () => void 
         </div>
         <p className="mt-1 text-[11px] text-muted">Valores negativos em &quot;Falta&quot; = excedido.</p>
       </div>
-      <a href={`https://claude.ai/new?q=${encodeURIComponent(prompt)}`} target="_blank" rel="noopener noreferrer" className="block rounded-xl border border-line bg-soft p-3 text-sm">
+      {!hideClaude && <a href={`https://claude.ai/new?q=${encodeURIComponent(prompt)}`} target="_blank" rel="noopener noreferrer" className="block rounded-xl border border-line bg-soft p-3 text-sm">
         <span className="font-semibold">Comentar com o Claude ↗</span>
         <span className="mt-0.5 block text-xs text-muted">Abre o teu chat com esta tabela para ele comentar e sugerir o resto do dia.</span>
-      </a>
+      </a>}
     </div>
   );
 }

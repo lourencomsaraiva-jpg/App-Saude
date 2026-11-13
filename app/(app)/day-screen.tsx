@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { addDays, formatDatePt, todayInTz, weekdayLong } from "@/lib/calc/dates";
+import { addDays, formatDatePt, hourInTz, todayInTz, weekdayLong } from "@/lib/calc/dates";
 import { fmt } from "@/lib/calc/numbers";
 import { formatPace, formatDuration } from "@/lib/calc/running";
 import { formatMinutes } from "@/lib/calc/sleep";
@@ -12,6 +12,9 @@ import { Bar, Section } from "@/components/ui";
 import { SyncButton } from "@/components/sync-button";
 import { QuickAdd } from "@/components/day/quick-add";
 import { RecentEntries } from "@/components/day/recent-entries";
+import { foodComment, workoutComment } from "@/lib/coach/comments";
+import { sumNutrients } from "@/lib/calc/nutrition";
+import { cardiacCost, paceFromDistance } from "@/lib/calc/running";
 import { MealList } from "@/components/day/meal-list";
 import { DayFields } from "@/components/day/day-fields";
 
@@ -44,6 +47,61 @@ export async function DayScreen({ date }: { date: string }) {
       ).sort((a, b) => a.created_at.localeCompare(b.created_at))
     : [];
   const s = day.summary;
+
+  // ---- comentários do treinador (regras, sem IA)
+  const runIds = day.activities.filter((a) => a.type === "corrida").map((a) => a.id);
+  const [tomorrowQ, lapsQ, similarQ] = await Promise.all([
+    supabase.from("planned_workouts").select("type, title").eq("date", addDays(date, 1)).neq("type", "descanso").limit(1).maybeSingle(),
+    runIds.length ? supabase.from("activity_laps").select("activity_id, distance_m, duration_s, avg_hr").eq("kind", "km_split").in("activity_id", runIds).order("idx") : Promise.resolve({ data: [] }),
+    runIds.length
+      ? supabase.from("activities").select("id, distance_m, moving_time_s, duration_s, avg_hr").eq("type", "corrida").gte("local_date", addDays(date, -60)).lt("local_date", date)
+      : Promise.resolve({ data: [] }),
+  ]);
+  const tomorrow = (tomorrowQ.data as { type: string; title: string } | null) ?? null;
+  const plannedList = (planned.data ?? []) as PlannedWorkoutRow[];
+  const todayRun = plannedList.find((w) => w.type !== "força" && w.type !== "descanso") ?? null;
+  const tz = process.env.APP_TIMEZONE || "Europe/Lisbon";
+  const foodTips = recent.length
+    ? foodComment({
+        hour: hourInTz(new Date(recent[recent.length - 1].created_at), tz),
+        entry: sumNutrients(recent.map((r) => ({ kcal: Number(r.kcal), protein_g: r.protein_g, carbs_g: r.carbs_g, fat_g: r.fat_g, fiber_g: r.fiber_g }))),
+        remaining: s.remaining,
+        target: { kcal: s.target.kcal, protein_g: s.target.protein_g },
+        todayWorkout: todayRun ? { type: todayRun.type, title: todayRun.title, done: todayRun.status === "feito" } : null,
+        tomorrowWorkout: tomorrow,
+        phaseNote: settings.phases.find((p) => (!p.start_date || p.start_date <= date) && (!p.end_date || date <= p.end_date) && /carga/i.test(p.note ?? ""))?.note ?? null,
+      })
+    : [];
+  const lapsBy = new Map<string, Array<{ pace: number | null; avgHr: number | null }>>();
+  for (const l of (lapsQ.data ?? []) as Array<{ activity_id: string; distance_m: number | null; duration_s: number | null; avg_hr: number | null }>) {
+    lapsBy.set(l.activity_id, [...(lapsBy.get(l.activity_id) ?? []), { pace: paceFromDistance(Number(l.distance_m), Number(l.duration_s)), avgHr: l.avg_hr }]);
+  }
+  const workoutTips = new Map<string, string[]>();
+  for (const a of day.activities) {
+    const pl = plannedList.find((w) => w.id === a.planned_workout_id) ?? (a.type === "força" ? plannedList.find((w) => w.type === "força") : todayRun) ?? null;
+    const dist = a.distance_m ? Number(a.distance_m) : 0;
+    const similar = ((similarQ.data ?? []) as Array<{ distance_m: number | null; moving_time_s: number | null; duration_s: number | null; avg_hr: number | null }>)
+      .filter((x) => dist && x.distance_m && Math.abs(Number(x.distance_m) - dist) / dist <= 0.25 && x.avg_hr)
+      .map((x) => cardiacCost(x.avg_hr, paceFromDistance(Number(x.distance_m), Number(x.moving_time_s ?? x.duration_s))))
+      .filter((x): x is number => x !== null);
+    workoutTips.set(
+      a.id,
+      workoutComment({
+        type: a.type,
+        distanceKm: dist ? dist / 1000 : null,
+        pace: a.pace,
+        avgHr: a.avg_hr,
+        maxHr: a.max_hr,
+        cardiacCost: a.cardiac_cost,
+        planned: pl ? { type: pl.type, title: pl.title, distanceKm: pl.distance_km === null ? null : Number(pl.distance_km), paceMinS: pl.target_pace_min_s, paceMaxS: pl.target_pace_max_s, hrMax: pl.target_hr_max } : null,
+        splits: lapsBy.get(a.id) ?? [],
+        similarCardiacCost: similar.length >= 2 ? similar.reduce((x, y) => x + y, 0) / similar.length : null,
+        easyHrMax: settings.profile?.easy_hr_max ?? 150,
+        tomorrow,
+      }),
+    );
+  }
+
   const photoUrls = new Map<string, string>();
   const withPhotos = ((meals.data ?? []) as MealRow[]).filter((m) => m.photo_path);
   if (withPhotos.length) {
@@ -110,6 +168,7 @@ export async function DayScreen({ date }: { date: string }) {
 
       {recent.length > 0 && (
         <RecentEntries
+          tips={foodTips}
           stamp={recent[recent.length - 1].created_at}
           s={{
             date,
@@ -143,7 +202,8 @@ export async function DayScreen({ date }: { date: string }) {
           </div>
         ))}
         {day.activities.map((a) => (
-          <Link key={a.id} href={`/treinos/${a.id}`} className="mt-1 block rounded-lg bg-soft p-2 text-sm">
+          <div key={a.id}>
+          <Link href={`/treinos/${a.id}`} className="mt-1 block rounded-lg bg-soft p-2 text-sm">
             <span className="chip mr-2 bg-card">Feito</span>
             <span className="font-medium capitalize">{a.name || a.type}</span>
             <span className="num text-muted">
@@ -154,6 +214,13 @@ export async function DayScreen({ date }: { date: string }) {
               {a.kcal_raw ? ` · ${fmt(Number(a.kcal_raw))} kcal` : ""}
             </span>
           </Link>
+          {(workoutTips.get(a.id) ?? []).length > 0 && (
+            <div className="mt-2 rounded-lg border border-accent/40 p-2 text-sm">
+              <div className="mb-1 text-xs font-semibold text-accent">Treinador</div>
+              <ul className="space-y-1">{workoutTips.get(a.id)!.map((t, i) => <li key={i}>{t}</li>)}</ul>
+            </div>
+          )}
+          </div>
         ))}
       </Section>
 
