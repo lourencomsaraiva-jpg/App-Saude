@@ -4,6 +4,7 @@ import { formatDuration, formatPace } from "@/lib/calc/running";
 import { Markdown } from "@/components/markdown";
 import { PageHeader, Section } from "@/components/ui";
 import { Chat, Projection, ReviewActions, RunReview } from "./client";
+import { ClaudeCoach } from "./claude-chat";
 
 interface Change { action: string; workout_id?: string; date?: string; title?: string; distance_km?: number; type?: string; reason: string }
 
@@ -20,11 +21,12 @@ export default async function TreinadorPage() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="Treinador" subtitle="Analisa os teus dados reais. Não inventa números." />
-      {!hasKey && <p className="rounded-lg bg-soft p-3 text-sm text-warn">Falta ANTHROPIC_API_KEY nas variáveis de ambiente da Vercel.</p>}
+      <PageHeader title="Treinador" subtitle="O teu Claude, com acesso aos teus dados reais pelo conector." />
+      <ClaudeCoach />
 
-      <Chat initial={((msgs ?? []) as Array<{ id: string; role: "user" | "assistant"; content: string }>).reverse()} />
+      {hasKey && <Chat initial={((msgs ?? []) as Array<{ id: string; role: "user" | "assistant"; content: string }>).reverse()} />}
 
+      {hasKey && (<>
       <Section title="Revisão semanal" right={<RunReview />}>
         <div id="revisao" className="space-y-4">
           {(reviews ?? []).length === 0 && <p className="text-sm text-muted">Ainda sem revisões. É gerada ao domingo à noite (cron) ou a pedido.</p>}
@@ -65,6 +67,7 @@ export default async function TreinadorPage() {
         <Projection last={projections?.[0]?.content ?? null} />
         <p className="mt-2 text-xs text-muted">Objetivos: meia &lt; {formatDuration(5400)} ({formatPace(5400 / 60 / 21.0975)}/km) · 10 km &lt; {formatDuration(2400)} ({formatPace(4)}/km).</p>
       </Section>
+      </>)}
     </div>
   );
 }
