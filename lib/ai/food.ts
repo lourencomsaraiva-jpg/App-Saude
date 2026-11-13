@@ -6,7 +6,7 @@
 import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
-import { ApiError, GoogleGenAI } from "@google/genai";
+import { ApiError, GoogleGenAI, ThinkingLevel } from "@google/genai";
 import { z } from "zod";
 import { round1 } from "../calc/numbers";
 import { checkKcalConsistency } from "../calc/nutrition";
@@ -96,20 +96,26 @@ async function viaGemini(parts: Array<{ text: string } | { inlineData: { mimeTyp
   const ai = new GoogleGenAI({ apiKey });
   let lastStatus = 0;
   const tried: string[] = [];
-  // Sobrecarga (503/500) ou limite (429): repete com espera e depois passa ao modelo seguinte.
+  const schema = z.toJSONSchema(FoodEstimateSchema);
+  const call = (model: string, fastThinking: boolean) =>
+    ai.models.generateContent({
+      model,
+      contents: [{ role: "user", parts }],
+      config: {
+        systemInstruction: system,
+        responseMimeType: "application/json",
+        responseJsonSchema: schema,
+        temperature: 0.2,
+        // estimar comida não precisa de "pensar": responde muito mais depressa
+        ...(fastThinking ? { thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL } } : {}),
+        abortSignal: AbortSignal.timeout(20_000),
+      },
+    });
   for (const model of geminiModels()) {
+    let fastThinking = true;
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
-        const res = await ai.models.generateContent({
-          model,
-          contents: [{ role: "user", parts }],
-          config: {
-            systemInstruction: system,
-            responseMimeType: "application/json",
-            responseJsonSchema: z.toJSONSchema(FoodEstimateSchema),
-            temperature: 0.2,
-          },
-        });
+        const res = await call(model, fastThinking);
         const text = res.text;
         if (!text) throw new Error("O Gemini não devolveu resposta.");
         return FoodEstimateSchema.parse(JSON.parse(text));
@@ -118,12 +124,17 @@ async function viaGemini(parts: Array<{ text: string } | { inlineData: { mimeTyp
         lastStatus = status;
         tried.push(`${model}: ${status || (e as Error).message.slice(0, 60)}`);
         console.error("Gemini", model, status, (e as Error).message);
-        if (status === 400 || status === 401 || status === 403) throw new Error("A chave do Gemini foi recusada. Verifica GEMINI_API_KEY na Vercel.");
-        if (status === 404) break; // modelo não existe nesta conta: passa ao seguinte
-        if (status === 429 || status >= 500) {
-          if (attempt === 0) await sleep(1500);
+        if (status === 401 || status === 403) throw new Error("A chave do Gemini foi recusada. Verifica GEMINI_API_KEY na Vercel.");
+        if (status === 400 && fastThinking) {
+          fastThinking = false; // modelo sem esta opção de raciocínio: repete sem ela
           continue;
         }
+        if (status === 400 || status === 404) break; // pedido/modelo não suportado: passa ao seguinte
+        if (status === 429 || status >= 500) {
+          if (attempt === 0) await sleep(700);
+          continue;
+        }
+        if ((e as Error).name === "TimeoutError" || /abort/i.test((e as Error).message)) break; // demasiado lento: modelo seguinte
         throw new Error("A estimativa veio num formato inválido. Tenta outra vez ou introduz à mão.");
       }
     }

@@ -127,8 +127,15 @@ export async function addItems(date: string, mealLabel: string, items: ItemInput
   });
   const { error } = await supabase.from("meal_items").insert(rows);
   if (error) return fail(error.message);
+  // Alimentos estimados que ainda não estão na tabela passam a favoritos (reconhecidos sem IA da próxima vez).
+  let learned: string[] = [];
+  if (["ai_text", "ai_photo", "manual"].includes(source)) {
+    const { learnFoods } = await import("@/lib/food/learn");
+    learned = await learnFoods(supabase, user.id, rows.filter((r) => !r.food_id).map((r) => ({ ...r, kcal: Number(r.kcal) }))).catch(() => []);
+  }
   refresh();
-  return { ok: true, message: `${rows.length} ${rows.length === 1 ? "item adicionado" : "itens adicionados"}.` };
+  const base = `${rows.length} ${rows.length === 1 ? "item adicionado" : "itens adicionados"}.`;
+  return { ok: true, message: learned.length ? `${base} Novo nos favoritos: ${learned.join(", ")}.` : base };
 }
 
 export async function addFood(date: string, mealLabel: string, foodId: string, multiplier: string): Promise<Result> {

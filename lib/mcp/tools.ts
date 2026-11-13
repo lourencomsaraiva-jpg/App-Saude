@@ -165,8 +165,11 @@ export async function callTool(db: DB, userId: string, name: string, args: Json)
       });
       const { error: ie } = await db.from("meal_items").insert(rows);
       if (ie) return { error: ie.message };
+      const { learnFoods } = await import("../food/learn");
+      const learned = await learnFoods(db, userId, rows).catch(() => []);
       return {
         saved: rows.map((r) => ({ description: r.description, kcal: r.kcal, needs_review: r.needs_review })),
+        added_to_favorites: learned,
         day: await daySummary(db, userId, date),
       };
     }
