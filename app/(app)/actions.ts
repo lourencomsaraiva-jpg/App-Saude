@@ -13,6 +13,8 @@ import { matchLocal } from "@/lib/food/local-match";
 import { parseDurationHms } from "@/lib/calc/running";
 import { parseSleepText, validateSleep } from "@/lib/calc/sleep";
 import { importSeed, type SeedEntry } from "@/lib/import/seed";
+import { loadDays } from "@/lib/data/days";
+import { loadSettings } from "@/lib/data/settings";
 import { parseFit } from "@/lib/integrations/fit";
 import { intervalsConfigFromEnv } from "@/lib/integrations/intervals";
 import { linkActivitiesToPlan } from "@/lib/sync/link-plan";
@@ -102,7 +104,16 @@ async function getOrCreateMeal(date: string, mealLabel: MealLabel, photoPath?: s
   return data.id as string;
 }
 
-export async function addItems(date: string, mealLabel: string, items: ItemInput[], source: string, photoPath?: string | null): Promise<Result> {
+export interface MealSaved {
+  date: string;
+  label: string;
+  items: Array<{ description: string; kcal: number; protein_g: number | null; carbs_g: number | null; fat_g: number | null; fiber_g: number | null }>;
+  eaten: { kcal: number; protein_g: number | null; carbs_g: number | null; fat_g: number | null; fiber_g: number | null };
+  target: { kcal: number; protein_g: number; carbs_g: number; fat_g: number; fiber_g: number };
+  remaining: { kcal: number; protein_g: number; carbs_g: number; fat_g: number; fiber_g: number };
+}
+
+export async function addItems(date: string, mealLabel: string, items: ItemInput[], source: string, photoPath?: string | null): Promise<Result<MealSaved>> {
   const { supabase, user } = await requireUser();
   if (!isISODate(date)) return fail("Data inválida.");
   if (!items.length) return fail("Sem alimentos.");
@@ -136,10 +147,21 @@ export async function addItems(date: string, mealLabel: string, items: ItemInput
   }
   refresh();
   const base = `${rows.length} ${rows.length === 1 ? "item adicionado" : "itens adicionados"}.`;
-  return { ok: true, message: learned.length ? `${base} Novo nos favoritos: ${learned.join(", ")}.` : base };
+  // resumo do dia já calculado (lib/calc) para o cartão "depois da refeição"
+  const settings = await loadSettings(supabase);
+  const [day] = await loadDays(supabase, date, date, settings, false);
+  const data: MealSaved = {
+    date,
+    label: label(mealLabel),
+    items: rows.map((r) => ({ description: r.description, kcal: r.kcal, protein_g: r.protein_g, carbs_g: r.carbs_g, fat_g: r.fat_g, fiber_g: r.fiber_g })),
+    eaten: day.summary.eaten,
+    target: { kcal: day.summary.target.kcal, protein_g: day.summary.target.protein_g, carbs_g: day.summary.target.carbs_g, fat_g: day.summary.target.fat_g, fiber_g: day.summary.target.fiber_g },
+    remaining: day.summary.remaining,
+  };
+  return { ok: true, data, message: learned.length ? `${base} Novo nos favoritos: ${learned.join(", ")}.` : base };
 }
 
-export async function addFood(date: string, mealLabel: string, foodId: string, multiplier: string): Promise<Result> {
+export async function addFood(date: string, mealLabel: string, foodId: string, multiplier: string): Promise<Result<MealSaved>> {
   const { supabase } = await requireUser();
   const mult = parseMultiplier(multiplier || "1");
   if (!mult) return fail("Multiplicador inválido.");
@@ -150,7 +172,7 @@ export async function addFood(date: string, mealLabel: string, foodId: string, m
   return addItems(date, mealLabel, [{ description: mult === 1 ? `${food.name} (${food.serving})` : `${food.name} (${round1(mult)} × ${food.serving})`, quantity: food.serving_g ? round1(food.serving_g * mult) : round1(mult), unit: food.serving_g ? "g" : "dose", ...n, kcal: n.kcal ?? 0, weight_confirmed: false, food_id: food.id }], "favorite");
 }
 
-export async function addRecipe(date: string, mealLabel: string | null, recipeId: string, portions: string): Promise<Result> {
+export async function addRecipe(date: string, mealLabel: string | null, recipeId: string, portions: string): Promise<Result<MealSaved>> {
   const { supabase } = await requireUser();
   const { data: r } = await supabase.from("recipes").select("*, recipe_items(*)").eq("id", recipeId).single();
   if (!r) return fail("Receita não encontrada.");
@@ -238,7 +260,7 @@ export async function moveMeal(id: string, newLabel: string): Promise<Result> {
 }
 
 /** "Igual a…": copia uma refeição de outro dia com multiplicador (ex.: 3/5). */
-export async function copyMeal(mealId: string, toDate: string, toLabel: string, multiplier: string): Promise<Result> {
+export async function copyMeal(mealId: string, toDate: string, toLabel: string, multiplier: string): Promise<Result<MealSaved>> {
   const { supabase } = await requireUser();
   const mult = parseMultiplier(multiplier || "1");
   if (!mult) return fail("Multiplicador inválido. Ex.: 1, 0,5 ou 3/5.");
