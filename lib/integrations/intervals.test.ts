@@ -22,6 +22,7 @@ describe("Intervals.icu → app", () => {
   it("tipos", () => {
     expect(mapActivityType("VirtualRide")).toBe("bicicleta");
     expect(mapActivityType("WeightTraining")).toBe("força");
+    expect(mapActivityType("HighIntensityIntervalTraining")).toBe("força");
     expect(mapActivityType("TrailRun")).toBe("corrida");
   });
   it("wellness: sono da manhã de X fica no dia X−1; fases quando existirem", () => {

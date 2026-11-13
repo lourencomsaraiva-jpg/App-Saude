@@ -103,7 +103,7 @@ export function mapActivityType(t: string | undefined): string {
   const x = (t ?? "").toLowerCase();
   if (/run/.test(x)) return "corrida";
   if (/ride|cycl|bike/.test(x)) return "bicicleta";
-  if (/weight|strength|crossfit|workout|hiit/.test(x)) return "força";
+  if (/weight|strength|crossfit|workout|hiit|highintensity/.test(x)) return "força";
   if (/walk|hike/.test(x)) return "caminhada";
   if (/swim/.test(x)) return "natação";
   return "outro";
