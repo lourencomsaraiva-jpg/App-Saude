@@ -122,7 +122,8 @@ export async function addItems(date: string, mealLabel: string, items: ItemInput
       ...v,
       weight_confirmed: !!i.weight_confirmed,
       source,
-      needs_review: !checkKcalConsistency(v).ok,
+      // valores da tabela pessoal (favoritos, receitas, cópias) são de confiança; só as estimativas são verificadas
+      needs_review: ["ai_text", "ai_photo", "manual"].includes(source) ? !checkKcalConsistency(v).ok : false,
     };
   });
   const { error } = await supabase.from("meal_items").insert(rows);
