@@ -29,38 +29,39 @@ export function summaryText(s: MealSaved) {
 export function MealSummary({ s, onClose }: { s: MealSaved; onClose: () => void }) {
   const t = s.target;
   const cell = (v: number | null, d: number, neg = false) => (
-    <td className={`px-1 py-1 text-right ${neg && v !== null && v < 0 ? "text-bad" : ""}`}>{fmt(v, d)}</td>
+    <td className={`whitespace-nowrap px-0.5 py-1 text-right ${neg && v !== null && v < 0 ? "text-bad" : ""}`}>{fmt(v, d)}</td>
   );
   const prompt = `Usa o conector Treino & Nutrição. Acabei de registar (${s.label}):\n\n${summaryText(s)}\n\nComenta de forma curta e sugere o que comer no resto do dia para fechar os alvos.`;
   return (
     <div className="mt-3 space-y-3">
       <div className="rounded-xl border border-accent p-3">
         <div className="mb-2 flex items-center justify-between">
-          <h3 className="text-sm font-semibold capitalize">Registado · {s.label}</h3>
+          <h3 className="text-sm font-semibold">Registado · {s.label}</h3>
           <button type="button" className="text-muted" onClick={onClose} aria-label="Fechar">✕</button>
         </div>
-        <div className="-mx-3 overflow-x-auto px-3">
-          <table className="num w-full min-w-[420px] text-xs">
+        <div>
+          <table className="num w-full table-fixed text-[11px] leading-tight">
             <thead className="text-muted">
               <tr className="border-b border-line">
-                <th className="py-1 text-left font-medium">Alimento</th>
-                {COLS.map(([k, l]) => <th key={k} className="px-1 text-right font-medium">{l}</th>)}
+                <th className="w-[34%] py-1 text-left font-medium">Alimento</th>
+                {COLS.map(([k, l]) => <th key={k} className="px-0.5 text-right font-medium">{l}</th>)}
               </tr>
             </thead>
             <tbody>
               {s.items.map((i, idx) => (
                 <tr key={idx} className="border-b border-line">
-                  <td className="py-1 pr-2">{i.description}</td>
-                  {COLS.map(([k, , d]) => <td key={k} className="px-1 py-1 text-right">{fmt(i[k], d)}</td>)}
+                  <td className="break-words py-1 pr-1">{i.description}</td>
+                  {COLS.map(([k, , d]) => <td key={k} className="whitespace-nowrap px-0.5 py-1 text-right">{fmt(i[k], d)}</td>)}
                 </tr>
               ))}
               <tr className="border-b border-line font-semibold">
-                <td className="py-1 pr-2">Total comido hoje</td>
+                <td className="py-1 pr-1">Total comido hoje</td>
                 {COLS.map(([k, , d]) => cell(s.eaten[k], d))}
               </tr>
               <tr className="font-semibold text-accent">
-                <td className="py-1 pr-2">
-                  Falta <span className="font-normal text-muted">(alvo {fmt(t.kcal)} kcal / {fmt(t.protein_g)} P / {fmt(t.carbs_g, 1)} H / {fmt(t.fat_g, 1)} G / {fmt(t.fiber_g)} F)</span>
+                <td className="py-1 pr-1">
+                  Falta
+                  <span className="block text-[10px] font-normal text-muted">alvo {fmt(t.kcal)} kcal · {fmt(t.protein_g)} P · {fmt(t.carbs_g)} H · {fmt(t.fat_g)} G · {fmt(t.fiber_g)} F</span>
                 </td>
                 {COLS.map(([k, , d]) => cell(s.remaining[k], d, true))}
               </tr>

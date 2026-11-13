@@ -11,8 +11,14 @@ import { StrengthList } from "@/components/strength-list";
 import { Bar, Section } from "@/components/ui";
 import { SyncButton } from "@/components/sync-button";
 import { QuickAdd } from "@/components/day/quick-add";
+import { RecentEntries } from "@/components/day/recent-entries";
 import { MealList } from "@/components/day/meal-list";
 import { DayFields } from "@/components/day/day-fields";
+
+/** Instante de há N horas (fora do render para manter o componente puro). */
+function hoursAgo(h: number) {
+  return new Date().getTime() - h * 3600_000;
+}
 
 export async function DayScreen({ date }: { date: string }) {
   const { supabase } = await requireUser();
@@ -28,6 +34,15 @@ export async function DayScreen({ date }: { date: string }) {
     supabase.from("sleep").select("*").eq("day_date", addDays(date, -1)).maybeSingle(),
   ]);
   const day = days[0];
+  // Últimas entradas (2 h) para o cartão de comentário no ecrã Hoje
+  const since = hoursAgo(2);
+  const recent = date === today
+    ? ((meals.data ?? []) as MealRow[]).flatMap((m) =>
+        (m.meal_items ?? [])
+          .filter((i) => Date.parse((i as unknown as { created_at: string }).created_at) >= since)
+          .map((i) => ({ ...i, label: m.label, created_at: (i as unknown as { created_at: string }).created_at })),
+      ).sort((a, b) => a.created_at.localeCompare(b.created_at))
+    : [];
   const s = day.summary;
   const photoUrls = new Map<string, string>();
   const withPhotos = ((meals.data ?? []) as MealRow[]).filter((m) => m.photo_path);
@@ -92,6 +107,20 @@ export async function DayScreen({ date }: { date: string }) {
           <div><dt className="text-muted">Saldo</dt><dd className={`font-semibold ${s.balance_kcal > 0 ? "text-warn" : ""}`}>{s.balance_kcal > 0 ? "+" : ""}{fmt(s.balance_kcal)}</dd></div>
         </dl>
       </Section>
+
+      {recent.length > 0 && (
+        <RecentEntries
+          stamp={recent[recent.length - 1].created_at}
+          s={{
+            date,
+            label: `últimas 2 h · ${[...new Set(recent.map((r) => r.label))].join(", ")}`,
+            items: recent.map((r) => ({ description: r.description, kcal: Number(r.kcal), protein_g: r.protein_g, carbs_g: r.carbs_g, fat_g: r.fat_g, fiber_g: r.fiber_g })),
+            eaten: day.summary.eaten,
+            target: { kcal: day.summary.target.kcal, protein_g: day.summary.target.protein_g, carbs_g: day.summary.target.carbs_g, fat_g: day.summary.target.fat_g, fiber_g: day.summary.target.fiber_g },
+            remaining: day.summary.remaining,
+          }}
+        />
+      )}
 
       <QuickAdd date={date} foods={(foods.data ?? []) as FoodRow[]} recipes={(recipes.data ?? []) as RecipeRow[]} />
 

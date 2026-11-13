@@ -7,7 +7,6 @@ import { fmt } from "@/lib/calc/numbers";
 import { recipeTotals } from "@/lib/calc/nutrition";
 import { MEAL_LABELS, type FoodRow, type RecipeRow } from "@/lib/types";
 import { EstimateTable, type EditableItem } from "./estimate-table";
-import { MealSummary } from "./meal-summary";
 import type { MealSaved } from "@/app/(app)/actions";
 
 type Tab = "favoritos" | "foto" | "texto" | "manual" | "igual" | "receitas";
@@ -45,7 +44,7 @@ export function QuickAdd({ date, foods, recipes }: { date: string; foods: FoodRo
   const [label, setLabel] = useState<string>(defaultLabel);
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
-  const [saved, setSaved] = useState<MealSaved | null>(null);
+  const [open, setOpen] = useState(false);
   const [estimate, setEstimate] = useState<{ items: EditableItem[]; comment: string; source: "ai_text" | "ai_photo" | "manual"; photoPath: string | null } | null>(null);
   const [text, setText] = useState("");
   const [hint, setHint] = useState("");
@@ -75,7 +74,6 @@ export function QuickAdd({ date, foods, recipes }: { date: string; foods: FoodRo
     start(async () => {
       const r = await fn();
       setMsg(r.ok ? { ok: true, text: r.message ?? okText ?? "Adicionado." } : { ok: false, text: r.message ?? "Erro." });
-      if (r.ok && r.data) setSaved(r.data);
       if (r.ok) setTimeout(() => setMsg(null), 3000);
     });
 
@@ -92,10 +90,19 @@ export function QuickAdd({ date, foods, recipes }: { date: string; foods: FoodRo
 
   const aiFailed = msg && !msg.ok && (tab === "texto" || tab === "foto");
 
+  if (!open) {
+    return (
+      <button type="button" onClick={() => setOpen(true)} className="card flex w-full items-center justify-between text-left">
+        <span className="text-sm font-semibold">+ Adicionar comida</span>
+        <span className="text-xs text-muted">Favoritos · Foto · Texto · Manual ▾</span>
+      </button>
+    );
+  }
+
   return (
     <section className="card">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold">Adicionar comida</h2>
+        <button type="button" onClick={() => { setOpen(false); setEstimate(null); setMsg(null); }} className="text-left text-sm font-semibold">Adicionar comida ▴</button>
         <select value={label} onChange={(e) => setLabel(e.target.value)} className="!w-auto !py-1 text-sm" aria-label="Refeição">
           {MEAL_LABELS.map((l) => (
             <option key={l} value={l}>{l}</option>
@@ -124,7 +131,7 @@ export function QuickAdd({ date, foods, recipes }: { date: string; foods: FoodRo
             onSave={(items) =>
               start(async () => {
                 const r = await addItems(date, label, items, estimate.source, estimate.photoPath);
-                if (r.ok) { setEstimate(null); setText(""); setPreview(null); setHint(""); setMsg({ ok: true, text: r.message ?? "Gravado." }); if (r.data) setSaved(r.data); }
+                if (r.ok) { setEstimate(null); setText(""); setPreview(null); setHint(""); setMsg({ ok: true, text: r.message ?? "Gravado." }); }
                 else setMsg({ ok: false, text: r.message });
               })
             }
@@ -221,7 +228,6 @@ export function QuickAdd({ date, foods, recipes }: { date: string; foods: FoodRo
         </div>
       )}
       {msg && <p className={`mt-3 text-sm ${msg.ok ? "text-good" : "text-bad"}`}>{msg.text}</p>}
-      {saved && <MealSummary s={saved} onClose={() => setSaved(null)} />}
       {aiFailed && !estimate && (
         <button type="button" className="btn btn-ghost btn-sm mt-2" onClick={() => { setMsg(null); manual(tab === "texto" ? text : hint); }}>
           Introduzir à mão
