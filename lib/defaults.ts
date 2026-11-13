@@ -101,6 +101,7 @@ export const DEFAULT_FAVORITE_MEALS: Array<{ name: string; label: string; items:
 
 export const DEFAULT_RACES = [
   { name: "Corrida do Tejo 10 km", date: "2026-09-13", distance_m: 10000, goal_time_s: null, result_time_s: 44 * 60 + 10, is_main: false },
+  { name: "Meia Maratona de Lisboa (Hyundai Half)", date: "2026-10-11", distance_m: 21097, goal_time_s: null, result_time_s: 1 * 3600 + 36 * 60 + 24, is_main: false },
   { name: "Meia Maratona dos Descobrimentos", date: "2026-11-28", distance_m: 21097, goal_time_s: 90 * 60, result_time_s: null, is_main: true },
   { name: "GP de Natal Benfica 10 km", date: "2026-12-20", distance_m: 10000, goal_time_s: 40 * 60, result_time_s: null, is_main: false },
 ];

@@ -4,7 +4,7 @@
  */
 import { scaleNutrients } from "../calc/nutrition";
 import { DEFAULT_FAVORITE_MEALS, DEFAULT_FOODS, DEFAULT_PHASES, DEFAULT_PROFILE, DEFAULT_RACES, DEFAULT_STRENGTH } from "../defaults";
-import { generatePlan } from "../plan/generate";
+import { buildAthletePlan } from "../plan/athlete-plan";
 import type { DB } from "../types";
 
 const readyUsers = new Set<string>();
@@ -67,17 +67,9 @@ export async function ensureSetup(db: DB, userId: string): Promise<{ created: bo
   }
 
   const mainRace = (races as Array<{ id: string; is_main: boolean }>).find((r) => r.is_main);
-  const workouts = generatePlan({
-    easy_pace_min_s: DEFAULT_PROFILE.easy_pace_min_s,
-    easy_pace_max_s: DEFAULT_PROFILE.easy_pace_max_s,
-    easy_hr_max: DEFAULT_PROFILE.easy_hr_max,
-    threshold_hr_min: DEFAULT_PROFILE.threshold_hr_min,
-    threshold_hr_max: DEFAULT_PROFILE.threshold_hr_max,
-    goal_hm_s: DEFAULT_PROFILE.goal_hm_s,
-    goal_10k_s: DEFAULT_PROFILE.goal_10k_s,
-  });
+  const workouts = buildAthletePlan();
   const plan = await must(
-    db.from("plans").insert({ user_id: userId, name: "Meia dos Descobrimentos + GP de Natal", race_id: mainRace?.id ?? null, start_date: workouts[0].date, end_date: workouts[workouts.length - 1].date }).select("id").single(),
+    db.from("plans").insert({ user_id: userId, name: "Plano de Treino (Ajustado) Ago–Dez 2026", race_id: mainRace?.id ?? null, start_date: workouts[0].date, end_date: workouts[workouts.length - 1].date }).select("id").single(),
     "Plano",
   );
   await must(
