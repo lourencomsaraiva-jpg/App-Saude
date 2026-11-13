@@ -23,7 +23,7 @@ export interface DayView {
 }
 
 const ACTIVITY_COLS =
-  "id, external_id, source, name, type, start_time, local_date, distance_m, duration_s, moving_time_s, avg_hr, max_hr, kcal_raw, ascent_m, descent_m, training_effect, training_load, conditions, feel, fit_path, planned_workout_id, ai_analysis";
+  "id, external_id, source, name, type, start_time, local_date, distance_m, duration_s, moving_time_s, avg_hr, max_hr, kcal_raw, ascent_m, descent_m, training_effect, training_load, conditions, feel, fit_path, planned_workout_id, ai_analysis, created_at";
 
 /**
  * Carrega dias num intervalo e calcula os resumos com lib/calc.

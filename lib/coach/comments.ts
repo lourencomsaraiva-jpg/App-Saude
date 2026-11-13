@@ -16,6 +16,8 @@ export interface FoodCommentInput {
   todayWorkout?: { type: string; title: string; done: boolean } | null;
   tomorrowWorkout?: { type: string; title: string } | null;
   phaseNote?: string | null;
+  /** Só a avaliação do que foi comido (o plano do resto do dia aparece à parte). */
+  assessOnly?: boolean;
 }
 
 /** Sugestões de proteína magra (valores da tabela pessoal). */
@@ -49,6 +51,13 @@ export function foodComment(i: FoodCommentInput): string[] {
     else if (protPct < 0.08 && c + f > 0 && kcal >= 200) out.push(`Isto foi sobretudo hidratos e gordura (${fmt(kcal)} kcal, só ${fmt(p, 1)} g de proteína): conta como snack, não como refeição.`);
     else if (p < 15 && kcal >= 350) out.push(`Pouca proteína para ${fmt(kcal)} kcal (${fmt(p, 1)} g). Junta uma fonte de proteína na próxima refeição.`);
     if (fib >= 6) out.push(`Bom contributo de fibra (${fmt(fib, 1)} g).`);
+  }
+
+  if (i.assessOnly) {
+    if (r.kcal < -100) out.push(`Já passaste o alvo do dia em ${fmt(-r.kcal)} kcal — o que conta é a média semanal, não um dia.`);
+    else if (r.fat_g < -5) out.push(`A gordura já passou o alvo em ${fmt(-r.fat_g, 1)} g.`);
+    if (!out.length) out.push(`Registado: ${fmt(kcal)} kcal, ${fmt(p, 1)} g de proteína.`);
+    return out.slice(0, 3);
   }
 
   // 2) estado do dia

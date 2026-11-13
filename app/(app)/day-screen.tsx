@@ -11,12 +11,18 @@ import { StrengthList } from "@/components/strength-list";
 import { Bar, Section } from "@/components/ui";
 import { SyncButton } from "@/components/sync-button";
 import { QuickAdd } from "@/components/day/quick-add";
-import { RecentEntries } from "@/components/day/recent-entries";
+import { CoachCard } from "@/components/day/coach-card";
+import { mealLine, planMeals, trainingLines, type PlanFood } from "@/lib/coach/day-plan";
 import { foodComment, workoutComment } from "@/lib/coach/comments";
 import { sumNutrients } from "@/lib/calc/nutrition";
 import { cardiacCost, paceFromDistance } from "@/lib/calc/running";
 import { MealList } from "@/components/day/meal-list";
 import { DayFields } from "@/components/day/day-fields";
+
+/** Hora local atual (fora do render para manter o componente puro). */
+function currentHour(tz: string) {
+  return hourInTz(new Date(), tz);
+}
 
 /** Instante de há N horas (fora do render para manter o componente puro). */
 function hoursAgo(h: number) {
@@ -69,6 +75,7 @@ export async function DayScreen({ date }: { date: string }) {
         target: { kcal: s.target.kcal, protein_g: s.target.protein_g },
         todayWorkout: todayRun ? { type: todayRun.type, title: todayRun.title, done: todayRun.status === "feito" } : null,
         tomorrowWorkout: tomorrow,
+        assessOnly: true,
         phaseNote: settings.phases.find((p) => (!p.start_date || p.start_date <= date) && (!p.end_date || date <= p.end_date) && /carga/i.test(p.note ?? ""))?.note ?? null,
       })
     : [];
@@ -101,6 +108,22 @@ export async function DayScreen({ date }: { date: string }) {
       }),
     );
   }
+
+  // "O que vi" + "Até ao fim do dia" (só no dia de hoje)
+  const nowHour = currentHour(tz);
+  const recentActs = day.activities.filter((a) => a.created_at && Date.parse(a.created_at) >= since);
+  const seen = [...foodTips, ...recentActs.flatMap((a) => (workoutTips.get(a.id) ?? []).slice(0, 3).map((t) => `${a.type === "força" ? "Força" : "Treino"}: ${t}`))];
+  const plan = planMeals(nowHour, s.remaining, ((foods.data ?? []) as PlanFood[]).map((f) => ({ ...f, kcal: Number(f.kcal), protein_g: Number(f.protein_g), carbs_g: Number(f.carbs_g), fat_g: Number(f.fat_g), fiber_g: Number(f.fiber_g), serving_g: f.serving_g === null ? null : Number(f.serving_g) })));
+  const foodPlan = plan.meals.length ? plan.meals.map(mealLine) : s.remaining.kcal < 60 ? ["Alvo de calorias cumprido: não precisas de comer mais hoje."] : [];
+  const foodAfter = plan.meals.length ? `Depois disto: ${plan.after.kcal >= 0 ? `sobram ≈${fmt(plan.after.kcal)} kcal` : `passas ≈${fmt(-plan.after.kcal)} kcal`} · proteína ${plan.after.protein_g > 0 ? `falta ${fmt(plan.after.protein_g)} g` : "cumprida"} · fibra ${plan.after.fiber_g > 0 ? `falta ${fmt(plan.after.fiber_g)} g` : "cumprida"}.` : null;
+  const training = trainingLines({
+    hour: nowHour,
+    today: plannedList.map((w) => ({ type: w.type, title: w.title, status: w.status, firstStep: w.type === "força" ? "~25 min" : w.distance_km ? `≈${fmt(Number(w.distance_km), 1)} km` : null })),
+    doneTypes: day.activities.map((a) => a.type),
+    tomorrow,
+    steps: day.steps,
+  });
+  const coachPrompt = `Usa o conector Treino & Nutrição. Revê o meu dia de hoje e este plano para o resto do dia:\n${[...foodPlan, ...training].map((l) => `- ${l}`).join("\n")}\nAjusta o que achares melhor, como meu treinador e nutricionista.`;
 
   const photoUrls = new Map<string, string>();
   const withPhotos = ((meals.data ?? []) as MealRow[]).filter((m) => m.photo_path);
@@ -166,18 +189,21 @@ export async function DayScreen({ date }: { date: string }) {
         </dl>
       </Section>
 
-      {recent.length > 0 && (
-        <RecentEntries
-          tips={foodTips}
-          stamp={recent[recent.length - 1].created_at}
-          s={{
+      {date === today && (
+        <CoachCard
+          seen={seen}
+          foodPlan={foodPlan}
+          foodAfter={foodAfter}
+          training={training}
+          prompt={coachPrompt}
+          numbers={recent.length ? {
             date,
             label: `últimas 2 h · ${[...new Set(recent.map((r) => r.label))].join(", ")}`,
             items: recent.map((r) => ({ description: r.description, kcal: Number(r.kcal), protein_g: r.protein_g, carbs_g: r.carbs_g, fat_g: r.fat_g, fiber_g: r.fiber_g })),
             eaten: day.summary.eaten,
             target: { kcal: day.summary.target.kcal, protein_g: day.summary.target.protein_g, carbs_g: day.summary.target.carbs_g, fat_g: day.summary.target.fat_g, fiber_g: day.summary.target.fiber_g },
             remaining: day.summary.remaining,
-          }}
+          } : null}
         />
       )}
 

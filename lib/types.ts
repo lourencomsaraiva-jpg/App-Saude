@@ -147,6 +147,7 @@ export interface ActivityRow {
   fit_path: string | null;
   planned_workout_id: string | null;
   ai_analysis: string | null;
+  created_at?: string;
 }
 
 export interface LapRow {

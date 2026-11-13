@@ -48,3 +48,10 @@ describe("comentários de treino", () => {
     expect(workoutComment({ type: "força", distanceKm: null, pace: null, avgHr: null, maxHr: null, cardiacCost: null, splits: [], easyHrMax: 150 })[0]).toContain("Força feita");
   });
 });
+
+describe("só avaliação (cartão Treinador)", () => {
+  it("não repete o plano do resto do dia", () => {
+    const c = foodComment({ hour: 21, assessOnly: true, entry: { kcal: 350, protein_g: 5.2, carbs_g: 62.4, fat_g: 8.6, fiber_g: 0.6 }, remaining: { kcal: 168, protein_g: 34.6, carbs_g: 40.9, fat_g: -1.5, fiber_g: 16 }, target: { kcal: 2148, protein_g: 155 }, tomorrowWorkout: { type: "longo", title: "Longo" } });
+    expect(c).toEqual(["Isto foi sobretudo hidratos e gordura (350 kcal, só 5,2 g de proteína): conta como snack, não como refeição."]);
+  });
+});
