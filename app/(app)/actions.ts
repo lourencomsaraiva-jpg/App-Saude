@@ -727,3 +727,29 @@ export async function sendWorkoutToGarmin(workoutId: string, date?: string): Pro
     return fail((e as Error).message);
   }
 }
+
+/**
+ * Treino de teste para descobrir que formato de ritmo o relógio Garmin mostra como alvo.
+ * Cada passo (1 min) usa um formato diferente; o atleta diz quais mostram o ritmo no relógio.
+ */
+export async function sendPaceFormatTest(): Promise<Result> {
+  await requireUser();
+  const { intervalsConfigFromEnv, upsertWorkoutEvent } = await import("@/lib/integrations/intervals");
+  const cfg = intervalsConfigFromEnv();
+  if (!cfg) return fail("Intervals.icu não configurado.");
+  const date = todayInTz();
+  const description = [
+    "- 1m 6:15-5:55/km Pace",
+    "- 1m 5:55-6:15/km Pace",
+    "- 1m 6:00/km Pace",
+    "- 1m 75-80% Pace",
+    "- 1m Z2 Pace",
+    "- 0.5km 5:55-5:30/km Pace",
+  ].join("\n");
+  try {
+    await upsertWorkoutEvent(cfg, { date, name: "TESTE ritmos (6 formatos)", description, externalId: `app-teste-ritmos-${date}` });
+    return { ok: true, message: "Teste enviado para hoje. Sincroniza o relógio." };
+  } catch (e) {
+    return fail((e as Error).message);
+  }
+}

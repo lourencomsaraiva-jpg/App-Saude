@@ -6,7 +6,7 @@ import { loadSettings } from "@/lib/data/settings";
 import type { RaceRow } from "@/lib/types";
 import { PageHeader, Section } from "@/components/ui";
 import { SyncButton } from "@/components/sync-button";
-import { Backfill, ImportSeed, PhaseRowEditor, ProbeWellness, ProfileForm, RaceEditor, SetPasswordForm } from "./client";
+import { Backfill, ImportSeed, PaceFormatTest, PhaseRowEditor, ProbeWellness, ProfileForm, RaceEditor, SetPasswordForm } from "./client";
 
 export default async function DefinicoesPage() {
   const { supabase, user } = await requireUser();
@@ -58,6 +58,7 @@ export default async function DefinicoesPage() {
         <div className="mt-3 flex flex-wrap gap-2">
           <Backfill />
           <ProbeWellness />
+          <PaceFormatTest />
         </div>
         <p className="mt-2 text-xs text-muted">Sincroniza de hora a hora (cron), ao abrir a app e com o botão. Valores manuais nunca são substituídos.</p>
       </Section>

@@ -1,6 +1,6 @@
 "use client";
 import { useState, useTransition } from "react";
-import { deletePhase, deleteRace, importSeedFile, probeWellness, savePhase, saveProfile, saveRace, setPassword } from "../actions";
+import { deletePhase, deleteRace, importSeedFile, probeWellness, savePhase, saveProfile, saveRace, sendPaceFormatTest, setPassword } from "../actions";
 import { requestSync } from "@/lib/sync/client";
 import { useRouter } from "next/navigation";
 
@@ -168,5 +168,18 @@ export function SetPasswordForm() {
       <button className="btn btn-sm" disabled={pending}>{pending ? "A guardar…" : "Guardar password"}</button>
       {msg && <p className={`text-sm ${msg.ok ? "text-good" : "text-bad"}`}>{msg.text}</p>}
     </form>
+  );
+}
+
+export function PaceFormatTest() {
+  const [pending, start] = useTransition();
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  return (
+    <span className="inline-flex flex-col gap-1">
+      <button className="btn btn-ghost btn-sm" disabled={pending} onClick={() => start(async () => { const r = await sendPaceFormatTest(); setMsg(r.ok ? { ok: true, text: r.message ?? "Enviado." } : { ok: false, text: r.message }); })}>
+        {pending ? "A enviar…" : "Enviar treino de teste de ritmos (hoje)"}
+      </button>
+      {msg && <span className={`text-xs ${msg.ok ? "text-good" : "text-bad"}`}>{msg.text}</span>}
+    </span>
   );
 }
