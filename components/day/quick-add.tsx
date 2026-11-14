@@ -60,7 +60,7 @@ export function QuickAdd({ date, foods, recipes, usage = {} }: { date: string; f
   const realRecipes = recipes.filter((r) => r.kind === "recipe");
   const shownFoods = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return q ? foods.filter((f) => f.name.toLowerCase().includes(q)) : rankFoods(foods, usage, label);
+    return q ? foods.filter((f) => f.name.toLowerCase().includes(q)) : rankFoods(foods, usage, label, 7);
   }, [foods, search, usage, label]);
 
   const manual = (description = "") =>
@@ -154,7 +154,7 @@ export function QuickAdd({ date, foods, recipes, usage = {} }: { date: string; f
             </div>
           )}
           <div className="flex gap-2">
-            <input placeholder="Procurar alimento…" value={search} onChange={(e) => setSearch(e.target.value)} className="flex-1" />
+            <input placeholder="Procurar outro alimento…" value={search} onChange={(e) => setSearch(e.target.value)} className="flex-1" />
             <input value={mult} onChange={(e) => setMult(e.target.value)} className="num !w-20 text-center" aria-label="Doses" title="Doses (1, 0,5, 3/5)" />
           </div>
           <div className="flex flex-wrap gap-2">
