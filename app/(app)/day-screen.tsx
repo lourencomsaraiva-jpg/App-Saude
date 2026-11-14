@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { buildUsage } from "@/lib/food/rank";
 import { addDays, formatDatePt, hourInTz, todayInTz, weekdayLong } from "@/lib/calc/dates";
 import { fmt } from "@/lib/calc/numbers";
 import { formatPace, formatDuration } from "@/lib/calc/running";
@@ -33,7 +34,7 @@ export async function DayScreen({ date }: { date: string }) {
   const { supabase } = await requireUser();
   const today = todayInTz();
   const settingsP = loadSettings(supabase);
-  const [settings, days, meals, foods, recipes, planned, lastNight] = await Promise.all([
+  const [settings, days, meals, foods, recipes, planned, lastNight, usageQ] = await Promise.all([
     settingsP,
     loadDays(supabase, date, date, settingsP, false),
     supabase.from("meals").select("*, meal_items(*)").eq("date", date).order("eaten_at", { nullsFirst: false }).order("created_at"),
@@ -41,7 +42,16 @@ export async function DayScreen({ date }: { date: string }) {
     supabase.from("recipes").select("*, recipe_items(*)").order("kind").order("name"),
     supabase.from("planned_workouts").select("*, strength_sessions(name, notes, strength_exercises(*))").eq("date", date),
     supabase.from("sleep").select("*").eq("day_date", addDays(date, -1)).maybeSingle(),
+    supabase.from("meal_items").select("food_id, description, meals!inner(label, date)").gte("meals.date", addDays(today, -120)).neq("meals.label", "histórico").limit(3000),
   ]);
+  const usage = buildUsage(
+    ((usageQ.data ?? []) as unknown as Array<{ food_id: string | null; description: string; meals: { label: string } | { label: string }[] }>).map((r) => ({
+      food_id: r.food_id,
+      description: r.description,
+      label: (Array.isArray(r.meals) ? r.meals[0]?.label : r.meals?.label) ?? "",
+    })),
+    (foods.data ?? []) as FoodRow[],
+  );
   const day = days[0];
   // Últimas entradas (2 h) para o cartão de comentário no ecrã Hoje
   const since = hoursAgo(2);
@@ -207,7 +217,7 @@ export async function DayScreen({ date }: { date: string }) {
         />
       )}
 
-      <QuickAdd date={date} foods={(foods.data ?? []) as FoodRow[]} recipes={(recipes.data ?? []) as RecipeRow[]} />
+      <QuickAdd date={date} foods={(foods.data ?? []) as FoodRow[]} recipes={(recipes.data ?? []) as RecipeRow[]} usage={usage} />
 
       <MealList date={date} meals={((meals.data ?? []) as MealRow[]).map((m) => ({ ...m, photo_url: photoUrls.get(m.id) ?? null }))} />
 

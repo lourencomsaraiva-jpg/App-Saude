@@ -7,6 +7,7 @@ import { fmt } from "@/lib/calc/numbers";
 import { recipeTotals } from "@/lib/calc/nutrition";
 import { MEAL_LABELS, type FoodRow, type RecipeRow } from "@/lib/types";
 import { EstimateTable, type EditableItem } from "./estimate-table";
+import { rankFoods, type Usage } from "@/lib/food/rank";
 import type { MealSaved } from "@/app/(app)/actions";
 
 type Tab = "favoritos" | "foto" | "texto" | "manual" | "igual" | "receitas";
@@ -39,12 +40,12 @@ async function resizeImage(file: File, max = 1280): Promise<string> {
   return canvas.toDataURL("image/jpeg", 0.82);
 }
 
-export function QuickAdd({ date, foods, recipes }: { date: string; foods: FoodRow[]; recipes: RecipeRow[] }) {
+export function QuickAdd({ date, foods, recipes, usage = {} }: { date: string; foods: FoodRow[]; recipes: RecipeRow[]; usage?: Usage }) {
   const [tab, setTab] = useState<Tab>("favoritos");
   const [label, setLabel] = useState<string>(defaultLabel);
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const [estimate, setEstimate] = useState<{ items: EditableItem[]; comment: string; source: "ai_text" | "ai_photo" | "manual"; photoPath: string | null } | null>(null);
   const [text, setText] = useState("");
   const [hint, setHint] = useState("");
@@ -59,8 +60,8 @@ export function QuickAdd({ date, foods, recipes }: { date: string; foods: FoodRo
   const realRecipes = recipes.filter((r) => r.kind === "recipe");
   const shownFoods = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return q ? foods.filter((f) => f.name.toLowerCase().includes(q)) : foods.filter((f) => f.is_favorite);
-  }, [foods, search]);
+    return q ? foods.filter((f) => f.name.toLowerCase().includes(q)) : rankFoods(foods, usage, label);
+  }, [foods, search, usage, label]);
 
   const manual = (description = "") =>
     setEstimate({
