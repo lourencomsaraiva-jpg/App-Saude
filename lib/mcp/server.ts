@@ -29,7 +29,7 @@ export function keyOk(given: string) {
 }
 
 let cachedUserId: string | null = null;
-async function resolveUser(db: DB): Promise<string | null> {
+export async function resolveUser(db: DB): Promise<string | null> {
   if (cachedUserId) return cachedUserId;
   const email = process.env.ALLOWED_EMAIL?.trim().toLowerCase();
   if (!email) return null;

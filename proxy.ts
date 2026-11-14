@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/login", "/entrar", "/auth", "/api/cron", "/api/mcp", "/manifest.webmanifest", "/sw.js", "/offline"];
+const PUBLIC_PATHS = ["/login", "/entrar", "/auth", "/api/cron", "/api/mcp", "/api/peso", "/manifest.webmanifest", "/sw.js", "/offline"];
 
 /** Renova a sessão Supabase e redireciona para /login quem não está autenticado. */
 /** Página de diagnóstico quando a configuração está incompleta (nunca mostra valores, só nomes). */

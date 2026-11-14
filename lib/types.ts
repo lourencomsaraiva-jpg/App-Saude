@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type DB = SupabaseClient<any, "public", any>;
 
-export type Source = "intervals" | "fit" | "manual" | "seed" | "strava";
+export type Source = "intervals" | "fit" | "manual" | "seed" | "strava" | "apple_health";
 export type MealLabel = "pequeno-almoço" | "almoço" | "lanche" | "jantar" | "extra" | "histórico";
 export const MEAL_LABELS: MealLabel[] = ["pequeno-almoço", "almoço", "lanche", "jantar", "extra"];
 
