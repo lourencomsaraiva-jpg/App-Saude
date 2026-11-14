@@ -12,13 +12,13 @@ import { formatPace } from "@/lib/calc/running";
 
 type Colors = Record<"s1" | "s2" | "s3" | "s4" | "grid" | "ref" | "muted" | "card" | "line" | "fg", string>;
 
-function readColors(): Colors {
+export function readColors(): Colors {
   const cs = getComputedStyle(document.documentElement);
   const v = (n: string) => cs.getPropertyValue(n).trim();
   return { s1: v("--series-1"), s2: v("--series-2"), s3: v("--series-3"), s4: v("--series-4"), grid: v("--chart-grid"), ref: v("--chart-ref"), muted: v("--muted"), card: v("--card"), line: v("--line"), fg: v("--fg") };
 }
 
-function useColors() {
+export function useColors() {
   const [c, setC] = useState<Colors | null>(null);
   useEffect(() => {
     const update = () => setC(readColors());
@@ -41,7 +41,7 @@ function Card({ title, note, children }: { title: string; note?: ReactNode; chil
 }
 
 type TipRow = { name?: string | number; value?: unknown; color?: string; dataKey?: unknown; payload?: Record<string, unknown> };
-function Tip({ active, payload, label, fmtValue, fmtLabel }: { active?: boolean; payload?: TipRow[]; label?: unknown; fmtValue?: (v: number, key: string) => string; fmtLabel?: (l: unknown, p?: Record<string, unknown>) => string }) {
+export function Tip({ active, payload, label, fmtValue, fmtLabel }: { active?: boolean; payload?: TipRow[]; label?: unknown; fmtValue?: (v: number, key: string) => string; fmtLabel?: (l: unknown, p?: Record<string, unknown>) => string }) {
   if (!active || !payload?.length) return null;
   return (
     <div className="rounded-lg border border-line bg-card px-2.5 py-1.5 text-xs shadow-sm">

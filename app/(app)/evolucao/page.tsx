@@ -8,6 +8,8 @@ import { buildDashboard } from "@/lib/data/dashboard";
 import { loadDays } from "@/lib/data/days";
 import { loadSettings } from "@/lib/data/settings";
 import { DashboardCharts } from "@/components/charts";
+import { ProgressIndex } from "@/components/progress-index";
+import { progressIndex, type ProgressDay } from "@/lib/calc/progress";
 import { PageHeader, Section, Stat } from "@/components/ui";
 
 type SP = { periodo?: string; semana?: string; de?: string; ate?: string };
@@ -36,7 +38,36 @@ export default async function EvolucaoPage({ searchParams }: { searchParams: Pro
     start = addDays(today, -(n - 1));
     label = `Últimos ${n} dias`;
   }
-  const days = await loadDays(supabase, start, end, settings, false);
+  // índice de evolução: sempre as últimas 12 semanas (independente do filtro)
+  const idxStart = addDays(weekStart(today), -77);
+  const [days, idxDays, idxPlanned] = await Promise.all([
+    loadDays(supabase, start, end, settings, false),
+    loadDays(supabase, idxStart, today, settings, false),
+    supabase.from("planned_workouts").select("date, type, status").gte("date", idxStart).lte("date", today),
+  ]);
+  const progress = progressIndex(
+    idxDays.map(
+      (d): ProgressDay => ({
+        date: d.date,
+        weight_kg: d.weight_kg,
+        steps: d.steps,
+        resting_hr: d.resting_hr,
+        hrv: d.hrv,
+        sleep_min: d.sleep?.total_min ?? null,
+        sleep_score: d.sleep?.score ?? null,
+        has_food: d.has_food,
+        kcal: d.summary.eaten.kcal,
+        kcal_target: d.summary.target.kcal,
+        protein_g: d.summary.eaten.protein_g,
+        protein_target: d.summary.target.protein_g,
+        fiber_g: d.summary.eaten.fiber_g,
+        fiber_target: d.summary.target.fiber_g,
+        run_cardiac_costs: d.activities.filter((a) => a.type === "corrida" && a.cardiac_cost !== null).map((a) => a.cardiac_cost!),
+      }),
+    ),
+    (idxPlanned.data ?? []) as Array<{ date: string; type: string; status: string }>,
+    { today, goalWeightKg: settings.profile?.goal_weight_kg ? Number(settings.profile.goal_weight_kg) : null },
+  );
   const actIds = days.flatMap((d) => d.activities.map((a) => a.id));
   const { data: planned } = actIds.length ? await supabase.from("activities").select("id, planned_workouts(type)").in("id", actIds) : { data: [] };
   const plannedTypeByActivity = new Map<string, string>(((planned ?? []) as unknown as Array<{ id: string; planned_workouts: { type: string } | null }>).filter((p) => p.planned_workouts).map((p) => [p.id, p.planned_workouts!.type]));
@@ -68,6 +99,8 @@ export default async function EvolucaoPage({ searchParams }: { searchParams: Pro
           <button className="btn btn-ghost btn-sm">Aplicar</button>
         </form>
       </div>
+
+      <ProgressIndex weeks={progress} />
 
       <Section>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
