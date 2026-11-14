@@ -3,6 +3,10 @@
  * e testa cada um com um pedido mínimo. Abre /api/gemini-teste no telemóvel.
  */
 import { NextResponse, type NextRequest } from "next/server";
+import { probeGeminiModel } from "@/lib/ai/food";
+
+// imagem de teste: 64×64 laranja (PNG)
+const TEST_PNG = "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAAeklEQVR4nO3PUQkAIBTAwJfExIY1giH8OITBAtzm7PV1wwUNaEEDWtCAFjSgBQ1oQQNa0IAWNKAFDWhBA1rQgBY0oAUNaEEDWtCAFjSgBQ1oQQNa0IAWNKAFDWhBA1rQgBY0oAUNaEEDWtCAFjSgBQ1oQQNa0IAWPHYBjCuheFQr/+YAAAAASUVORK5CYII=";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -43,6 +47,9 @@ export async function GET(req: NextRequest) {
       return `❌ ${id} — ${(e as Error).name === "TimeoutError" ? "demorou mais de 12 s" : (e as Error).message}`;
     }
   };
-  lines.push(...(await Promise.all(flash.slice(0, 12).map(test))));
+  lines.push(...(await Promise.all(flash.slice(0, 15).map(test))));
+  const cands = ["gemini-3.5-flash-lite", "gemini-3-flash-preview", "gemini-3.1-flash-lite", "gemini-3.5-flash", "gemini-flash-lite-latest", "gemini-3.6-flash", "gemini-3.7-flash", "gemini-3.8-flash"].filter((m) => flash.includes(m));
+  lines.push("", "Pedido real da app (foto + JSON):");
+  lines.push(...(await Promise.all(cands.map((m) => probeGeminiModel(m, [{ inlineData: { mimeType: "image/png", data: TEST_PNG } }, { text: "Prato de laranjas. Estima." }])))));
   return new NextResponse(lines.join("\n"), { headers: { "Content-Type": "text/plain; charset=utf-8" } });
 }

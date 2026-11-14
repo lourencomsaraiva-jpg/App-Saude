@@ -118,7 +118,20 @@ async function discoverFlashModels(ai: GoogleGenAI): Promise<string[]> {
   return models;
 }
 
-async function viaGemini(parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }>, system: string): Promise<FoodEstimate> {
+type GeminiPart = { text: string } | { inlineData: { mimeType: string; data: string } };
+
+/** Diagnóstico: o pedido exato da estimativa (JSON + raciocínio mínimo) a um modelo concreto. */
+export async function probeGeminiModel(model: string, parts: GeminiPart[]): Promise<string> {
+  const t0 = Date.now();
+  try {
+    const est = await viaGemini(parts, "És um nutricionista. Estima a refeição.", [model]);
+    return `✅ ${model} — ${est.items.length} itens (${((Date.now() - t0) / 1000).toFixed(1)} s)`;
+  } catch (e) {
+    return `❌ ${model} — ${(e as Error).message.slice(0, 160)} (${((Date.now() - t0) / 1000).toFixed(1)} s)`;
+  }
+}
+
+async function viaGemini(parts: GeminiPart[], system: string, only?: string[]): Promise<FoodEstimate> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("Falta GEMINI_API_KEY (Vercel → Settings → Environment Variables).");
   const ai = new GoogleGenAI({ apiKey });
@@ -139,8 +152,8 @@ async function viaGemini(parts: Array<{ text: string } | { inlineData: { mimeTyp
         abortSignal: AbortSignal.timeout(20_000),
       },
     });
-  const queue = geminiModels();
-  let expanded = false;
+  const queue = only ?? geminiModels();
+  let expanded = !!only;
   for (let qi = 0; qi < queue.length; qi++) {
     const model = queue[qi];
     let fastThinking = true;
