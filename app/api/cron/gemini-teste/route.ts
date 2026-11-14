@@ -1,15 +1,17 @@
 /**
- * Diagnóstico do Gemini (só com sessão iniciada): lista os modelos "flash" que a chave pode usar
+ * Diagnóstico do Gemini (protegido por CRON_SECRET; corre a partir do Supabase pg_net): lista os modelos "flash" que a chave pode usar
  * e testa cada um com um pedido mínimo. Abre /api/gemini-teste no telemóvel.
  */
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 const BASE = "https://generativelanguage.googleapis.com/v1beta";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const secret = process.env.CRON_SECRET;
+  if (!secret || req.headers.get("authorization") !== `Bearer ${secret}`) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   const key = process.env.GEMINI_API_KEY?.trim();
   if (!key) return new NextResponse("Falta GEMINI_API_KEY na Vercel.", { status: 500 });
   const h = { "x-goog-api-key": key, "Content-Type": "application/json" };
