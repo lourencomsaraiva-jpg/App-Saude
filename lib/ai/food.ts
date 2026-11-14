@@ -80,8 +80,8 @@ function provider(): "gemini" | "anthropic" {
 
 /** Modelos a tentar, por ordem: GEMINI_MODEL, depois GEMINI_FALLBACK_MODELS (separados por vírgulas). */
 function geminiModels(): string[] {
-  const main = process.env.GEMINI_MODEL?.trim() || "gemini-3.8-flash";
-  const fallbacks = (process.env.GEMINI_FALLBACK_MODELS ?? "gemini-flash-latest,gemini-flash-lite-latest")
+  const main = process.env.GEMINI_MODEL?.trim() || "gemini-3.6-flash";
+  const fallbacks = (process.env.GEMINI_FALLBACK_MODELS ?? "gemini-3.5-flash,gemini-3.5-flash-lite")
     .split(",")
     .map((m) => m.trim())
     .filter(Boolean);
