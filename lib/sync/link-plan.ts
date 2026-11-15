@@ -19,6 +19,7 @@ export interface LinkActivity {
   type: string;
   local_date: string;
   planned_workout_id: string | null;
+  distance_m?: number | string | null;
 }
 export interface LinkPlanned {
   id: string;
@@ -29,7 +30,7 @@ export interface LinkPlanned {
 /** Função pura: devolve pares atividade → treino planeado. */
 export function computeLinks(acts: LinkActivity[], planned: LinkPlanned[]): Array<{ activityId: string; plannedId: string }> {
   const used = new Set(acts.map((a) => a.planned_workout_id).filter((x): x is string => !!x));
-  const pending = acts.filter((a) => !a.planned_workout_id && (a.type === "corrida" || a.type === "força")).sort((a, b) => a.local_date.localeCompare(b.local_date));
+  const pending = acts.filter((a) => !a.planned_workout_id && (a.type === "corrida" || a.type === "força")).sort((a, b) => a.local_date.localeCompare(b.local_date) || Number(b.distance_m ?? 0) - Number(a.distance_m ?? 0)); // no mesmo dia, a mais longa primeiro
   const out: Array<{ activityId: string; plannedId: string }> = [];
   // 1.º passo: mesmo dia; 2.º passo: ±1 dia; 3.º passo: ±2 dias (sempre na mesma semana)
   for (const maxGap of [0, 1, 2]) {
@@ -52,7 +53,7 @@ export async function linkActivitiesToPlan(db: DB, userId: string, oldest: ISODa
   const from = weekStart(oldest);
   const to = addDays(weekStart(newest), 6);
   const [{ data: acts }, { data: planned }] = await Promise.all([
-    db.from("activities").select("id, type, local_date, planned_workout_id").eq("user_id", userId).gte("local_date", from).lte("local_date", to),
+    db.from("activities").select("id, type, local_date, planned_workout_id, distance_m").eq("user_id", userId).gte("local_date", from).lte("local_date", to),
     db.from("planned_workouts").select("id, date, type, status").eq("user_id", userId).gte("date", from).lte("date", to),
   ]);
   const links = computeLinks((acts ?? []) as LinkActivity[], (planned ?? []) as LinkPlanned[]);

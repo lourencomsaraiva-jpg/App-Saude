@@ -5,7 +5,8 @@
  *  Peso        ritmo de perda vs. objetivo: −0,25 a −1,0 kg/semana = 100; estável = 50; +0,5 kg = 0
  *  Nutrição    por dia: 50% kcal dentro de ±10% do alvo (0 a ±30%), 30% proteína, 20% fibra
  *  Sono        média por noite: 5 h = 0, 7,5 h = 100 (média com a pontuação do Garmin, se existir)
- *  Treino      treinos planeados feitos / planeados (até hoje)
+ *  Treino      média da execução de cada treino planeado (lib/calc/execution): distância, ritmo e FC vs. plano;
+ *              não feito = 0
  *  Eficiência  custo cardíaco médio das corridas vs. a tua mediana do período (−2% = 60, −10% = 100)
  *  Recuperação FC de repouso e VFC vs. a tua mediana (−1 bpm = 60; VFC +4% = 60)
  *  Passos      média diária / 10 000
@@ -34,6 +35,8 @@ export interface ProgressPlanned {
   date: ISODate;
   type: string;
   status: string;
+  /** execução 0–100 (sem valor: feito = 100) */
+  score?: number | null;
 }
 
 export const COMPONENTS = [
@@ -116,7 +119,7 @@ export function progressIndex(days: ProgressDay[], planned: ProgressPlanned[], o
 
     const wp = planned.filter((p) => p.date >= ws && p.date <= we && p.date < opts.today && p.type !== "descanso");
     const done = wp.filter((p) => p.status === "feito").length;
-    const treino = wp.length ? (done / wp.length) * 100 : null;
+    const treino = wp.length ? avg(wp.map((p) => (p.status === "feito" ? (p.score ?? 100) : 0))) : null;
 
     const cc = avg(wd.flatMap((d) => d.run_cardiac_costs));
     const eficiencia = cc !== null && ccBase ? clamp(50 + ((ccBase - cc) / ccBase) * 500) : null;

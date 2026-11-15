@@ -33,4 +33,10 @@ describe("planeado vs realizado automático", () => {
   it("força feita na quinta conta para a força de quarta ou sexta", () => {
     expect(computeLinks([{ id: "f", type: "força", local_date: "2026-11-05", planned_workout_id: null }], planned)).toEqual([{ activityId: "f", plannedId: "qua" }]);
   });
+  it("dois registos no mesmo dia: liga o mais longo", () => {
+    expect(computeLinks([
+      { id: "frag", type: "corrida", local_date: "2026-11-08", planned_workout_id: null, distance_m: 1004 },
+      { id: "longo", type: "corrida", local_date: "2026-11-08", planned_workout_id: null, distance_m: 16649 },
+    ], planned)[0]).toEqual({ activityId: "longo", plannedId: "dom" });
+  });
 });

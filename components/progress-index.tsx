@@ -14,7 +14,7 @@ const DETAIL: Record<ComponentKey, (w: ProgressWeek) => string> = {
   peso: (w) => (w.raw.weight_delta === null ? "Precisa de ≥2 pesagens nesta e na semana anterior" : `${fmt(w.raw.weight_avg, 1)} kg · ${w.raw.weight_delta > 0 ? "+" : ""}${fmt(w.raw.weight_delta, 1)} kg/sem.`),
   nutricao: (w) => `${w.raw.food_days} dias registados · kcal, proteína e fibra vs. alvo`,
   sono: (w) => (w.raw.sleep_avg_min === null ? "Sem dados" : `${formatMinutes(w.raw.sleep_avg_min)} por noite`),
-  treino: (w) => (w.raw.plan_total ? `${w.raw.plan_done} de ${w.raw.plan_total} treinos planeados` : "Sem treinos planeados"),
+  treino: (w) => (w.raw.plan_total ? `${w.raw.plan_done} de ${w.raw.plan_total} feitos · distância, ritmo e FC vs. plano` : "Sem treinos planeados"),
   eficiencia: (w) => (w.raw.cardiac_cost === null ? "Sem corridas" : `Custo cardíaco ${fmt(w.raw.cardiac_cost, 1)} (menor = melhor)`),
   recuperacao: (w) => [w.raw.rhr !== null ? `FC rep. ${fmt(w.raw.rhr)}` : null, w.raw.hrv !== null ? `VFC ${fmt(w.raw.hrv)}` : null].filter(Boolean).join(" · ") || "Sem dados",
   passos: (w) => (w.raw.steps === null ? "Sem dados" : `${fmt(w.raw.steps)} passos/dia`),
