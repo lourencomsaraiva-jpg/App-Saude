@@ -70,6 +70,17 @@ export async function upsertWorkoutEvent(cfg: IntervalsConfig, ev: { date: strin
   return out[0] ?? null;
 }
 
+/** Diagnóstico: eventos do calendário (com o workout_doc que o Intervals gerou a partir do texto). */
+export async function fetchEvents(cfg: IntervalsConfig, oldest: string, newest: string) {
+  return get<Array<Record<string, unknown>>>(cfg, `/athlete/${cfg.athleteId}/events?oldest=${oldest}&newest=${newest}`);
+}
+
+/** Diagnóstico: definições de ritmo do desporto Run (limiar, unidades). */
+export async function fetchRunSettings(cfg: IntervalsConfig) {
+  const all = await get<Array<Record<string, unknown>>>(cfg, `/athlete/${cfg.athleteId}/sport-settings`);
+  return all.filter((s) => JSON.stringify(s.types ?? "").includes("Run")).map((s) => ({ types: s.types, threshold_pace: s.threshold_pace, pace_units: s.pace_units, pace_zones: s.pace_zones, pace_load_type: s.pace_load_type }));
+}
+
 // --------------------------------------------------------------------- tipos (parciais)
 export type IcuActivity = Record<string, unknown> & {
   id: string | number;
