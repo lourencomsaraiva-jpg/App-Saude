@@ -20,7 +20,7 @@ describe("treino → formato Intervals.icu", () => {
     );
   });
   it("séries com recuperação", () => {
-    expect(bodyLines("4×2000m a RHM ajustado −5s/km c/2min trote.")).toEqual(["4x", "- 2km 4:25-4:10/km Pace", "- 2m 6:15-5:55/km Pace"]);
+    expect(bodyLines("4×2000m a RHM ajustado −5s/km c/2min trote.")).toEqual(["4x", "- 2km 4:20-4:05/km Pace", "- 2m 6:15-5:55/km Pace"]);
     expect(bodyLines("6×400m (I: 3:40-3:55/km) c/200m trote + 4×1000m (R10: 3:55-4:10/km) c/90s trote.")).toEqual([
       "6x", "- 0.4km 3:55-3:40/km Pace", "- 0.2km 6:15-5:55/km Pace", "", "4x", "- 1km 4:10-3:55/km Pace", "- 90s 6:15-5:55/km Pace",
     ]);
@@ -40,5 +40,19 @@ describe("treino → formato Intervals.icu", () => {
       expect(d, p.date).toMatch(/Corpo\n(\d+x\n)?- /);
       expect(d, p.date).not.toMatch(/NaN|undefined/);
     }
+  });
+  it("longo só com notas: 10 fácil + 8 a ritmo de meia (15/11)", () => {
+    const w = toIntervalsWorkout("Longo 18 km", [
+      { kind: "nota", description: "10km a fácil (5:30-5:55/km), FC abaixo de 150" },
+      { kind: "nota", description: "8km a ritmo de meia (4:28-4:32/km), FC 165-172" },
+      { kind: "nota", description: "5min a caminhar ou trote muito leve" },
+      { kind: "nota", description: "Nota: gel ao km 8." },
+    ]);
+    expect(w.description).toContain("- 10km 5:55-5:30/km Pace\n- 8km 4:32-4:28/km Pace\n- 5m 8:00-6:30/km Pace");
+    expect(w.description).toContain("Nota: gel ao km 8.");
+  });
+  it("RHM ajustado −5s/km e strides depois das séries", () => {
+    expect(bodyLines("4×2000m a RHM ajustado −5s/km c/2min trote.")).toEqual(["4x", "- 2km 4:20-4:05/km Pace", "- 2m 6:15-5:55/km Pace"]);
+    expect(bodyLines("4×1000m a RHM ajustado, ritmo controlado (não máximo) + 4 strides.")).toEqual(["4x", "- 1km 4:25-4:10/km Pace", "", "4x", "- 20s 4:10-3:55/km Pace", "- 60s 6:15-5:55/km Pace"]);
   });
 });

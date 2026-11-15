@@ -30,6 +30,18 @@ function paceTarget(fast: string, slow: string) {
 /** Ritmo explícito no texto (m:ss-m:ss ou m:ss), senão pela zona mencionada. */
 export function paceFromText(text: string, fallback: keyof typeof ZONE_PACE = "facil"): string {
   const t = norm(text);
+  // "RHM ajustado −5s/km": zona deslocada N segundos (− = mais rápido)
+  const adj = t.match(/ajustad[oa]\s*([−-]|\+)\s*(\d+)\s*s\s*\/\s*km/);
+  if (adj) {
+    const base = paceFromText(text.replace(/ajustad[oa]\s*[−+-]\s*\d+\s*s\s*\/\s*km/i, ""), fallback);
+    const delta = (adj[1] === "+" ? 1 : -1) * Number(adj[2]);
+    const shift = (p: string) => {
+      const [m, ss] = p.split(":").map(Number);
+      const v = m * 60 + ss + delta;
+      return `${Math.floor(v / 60)}:${String(v % 60).padStart(2, "0")}`;
+    };
+    return base.replace(/\d:\d{2}/g, shift);
+  }
   const range = t.match(/(\d:\d{2})\s*-\s*(\d:\d{2})\s*\/?\s*km/);
   if (range) {
     const [a, b] = [range[1], range[2]].sort(); // "4:10" < "4:25" em ordem alfabética para m:ss com 1 dígito
@@ -81,6 +93,8 @@ export function bodyLines(corpo: string): string[] {
       lines.push("", `${m[1]}x`, `- ${work} ${paceFromText(p, "t")}`);
       if (rec) lines.push(`- ${rec} ${paceTarget(...ZONE_PACE.lento)}`);
     }
+    const st = t.match(/\+\s*(\d+)(?:\s*-\s*(\d+))?\s*strides/);
+    if (st) lines.push("", `${st[2] ?? st[1]}x`, `- 20s ${paceTarget(...ZONE_PACE.r10)}`, `- 60s ${paceTarget(...ZONE_PACE.lento)}`);
     return lines.slice(1);
   }
   // composto: "22km: 12km a fácil + 10km a RHM" / "16km: 10km a fácil (...) + 6km finais a RHM 4:20/km"
@@ -113,6 +127,19 @@ export interface IntervalsWorkout {
 
 /** Texto do treino para o Intervals.icu a partir da estrutura do plano ("Aq:", "Corpo:", "Desaq:"). */
 export function toIntervalsWorkout(title: string, structure: WorkoutStep[]): IntervalsWorkout {
+  const STEP = /^(\d+(?:[.,]\d+)?)\s*(km|min)\b/i;
+  const hasSections = structure.some((s) => ["aquecimento", "série", "contínuo", "retorno à calma"].includes(s.kind) || /^(aq|corpo|desaq):/i.test(s.description));
+  const stepLines = structure.map((s) => s.description).filter((d) => STEP.test(d.trim()));
+  if (!hasSections && stepLines.length >= 2) {
+    const lines = stepLines.map((d) => {
+      const m = d.trim().match(STEP)!;
+      const amount = m[2].toLowerCase() === "km" ? distance(m[1], "km") : `${m[1]}m`;
+      const walk = /caminhar|trote muito leve/i.test(d);
+      return `- ${amount} ${walk ? paceTarget("6:30", "8:00") : paceFromText(d, /f[aá]cil/i.test(d) ? "facil" : "rhm")}`;
+    });
+    const notes = structure.map((s) => s.description).filter((d) => !stepLines.includes(d));
+    return { name: title, description: [["Corpo", ...lines].join("\n"), notes.length ? `\n${notes.join("\n")}` : ""].join("\n").trim() };
+  }
   const find = (prefix: RegExp) => structure.map((s) => s.description).find((d) => prefix.test(d));
   const aq = find(/^aq:|^aquecimento/i) ?? structure.find((s) => s.kind === "aquecimento")?.description;
   const corpo = find(/^corpo:/i) ?? structure.find((s) => s.kind === "série" || s.kind === "contínuo")?.description ?? title;
