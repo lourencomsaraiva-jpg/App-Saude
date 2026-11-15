@@ -81,6 +81,27 @@ export async function fetchRunSettings(cfg: IntervalsConfig) {
   return all.filter((s) => JSON.stringify(s.types ?? "").includes("Run")).map((s) => ({ types: s.types, threshold_pace: s.threshold_pace, pace_units: s.pace_units, pace_zones: s.pace_zones, pace_load_type: s.pace_load_type }));
 }
 
+/**
+ * Define o ritmo de limiar do desporto Run (sem ele o Intervals não envia os alvos de ritmo ao Garmin).
+ * paceSecPerKm: ex. 270 = 4:30/km. O Intervals guarda em m/s.
+ */
+export async function setRunThresholdPace(cfg: IntervalsConfig, paceSecPerKm: number) {
+  const all = await get<Array<Record<string, unknown>>>(cfg, `/athlete/${cfg.athleteId}/sport-settings`);
+  const run = all.find((x) => JSON.stringify(x.types ?? "").includes('"Run"'));
+  if (!run?.id) throw new Error("Definições de corrida não encontradas no Intervals.");
+  const auth = Buffer.from(`API_KEY:${cfg.apiKey}`).toString("base64");
+  const res = await fetch(`${BASE}/athlete/${cfg.athleteId}/sport-settings/${run.id}`, {
+    method: "PUT",
+    headers: { Authorization: `Basic ${auth}`, Accept: "application/json", "Content-Type": "application/json" },
+    body: JSON.stringify({ threshold_pace: Math.round((1000 / paceSecPerKm) * 10000) / 10000 }),
+    signal: AbortSignal.timeout(25_000),
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`Intervals.icu ${res.status} ao definir o limiar: ${(await res.text()).slice(0, 200)}`);
+  const out = (await res.json()) as Record<string, unknown>;
+  return { threshold_pace: out.threshold_pace, pace_units: out.pace_units };
+}
+
 // --------------------------------------------------------------------- tipos (parciais)
 export type IcuActivity = Record<string, unknown> & {
   id: string | number;
