@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { dayCloseComment } from "@/lib/coach/day-close";
+import { loadPlannedExecution } from "@/lib/data/execution";
 import { buildUsage } from "@/lib/food/rank";
 import { addDays, formatDatePt, hourInTz, todayInTz, weekdayLong } from "@/lib/calc/dates";
 import { fmt } from "@/lib/calc/numbers";
@@ -74,6 +76,24 @@ export async function DayScreen({ date }: { date: string }) {
       : Promise.resolve({ data: [] }),
   ]);
   const tomorrow = (tomorrowQ.data as { type: string; title: string } | null) ?? null;
+  // fecho do dia (só dias já terminados)
+  const closeComment =
+    date < today
+      ? dayCloseComment({
+          has_food: day.has_food,
+          kcal: s.eaten.kcal,
+          kcal_target: s.target.kcal,
+          protein_g: s.eaten.protein_g,
+          protein_target: s.target.protein_g,
+          fiber_g: s.eaten.fiber_g,
+          fiber_target: s.target.fiber_g,
+          sleep_min: lastNight.data?.total_min ?? null,
+          weight_kg: day.weight_kg,
+          runs: day.activities.filter((a) => a.type === "corrida" && a.distance_m).map((a) => ({ km: Number(a.distance_m) / 1000, pace: a.pace, avg_hr: a.avg_hr })),
+          strength_done: day.activities.some((a) => a.type === "força"),
+          planned: await loadPlannedExecution(supabase, date, date, settings.profile?.easy_hr_max ?? 150),
+        })
+      : null;
   const plannedList = (planned.data ?? []) as PlannedWorkoutRow[];
   const todayRun = plannedList.find((w) => w.type !== "força" && w.type !== "descanso") ?? null;
   const tz = process.env.APP_TIMEZONE || "Europe/Lisbon";
@@ -198,6 +218,13 @@ export async function DayScreen({ date }: { date: string }) {
           <div><dt className="text-muted">Saldo</dt><dd className={`font-semibold ${s.balance_kcal > 0 ? "text-warn" : ""}`}>{s.balance_kcal > 0 ? "+" : ""}{fmt(s.balance_kcal)}</dd></div>
         </dl>
       </Section>
+
+      {closeComment && (
+        <section className="card">
+          <h2 className="text-sm font-semibold">Comentário do dia</h2>
+          <p className="mt-1 text-sm leading-relaxed">{closeComment}</p>
+        </section>
+      )}
 
       {date === today && (
         <CoachCard

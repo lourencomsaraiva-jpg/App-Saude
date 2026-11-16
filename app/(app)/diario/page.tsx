@@ -6,6 +6,8 @@ import { formatPace } from "@/lib/calc/running";
 import { formatMinutes } from "@/lib/calc/sleep";
 import { loadDays } from "@/lib/data/days";
 import { loadSettings } from "@/lib/data/settings";
+import { loadPlannedExecution } from "@/lib/data/execution";
+import { dayCloseComment } from "@/lib/coach/day-close";
 import { PageHeader } from "@/components/ui";
 
 export default async function DiarioPage({ searchParams }: { searchParams: Promise<{ dias?: string }> }) {
@@ -14,16 +16,36 @@ export default async function DiarioPage({ searchParams }: { searchParams: Promi
   const n = Math.min(Math.max(Number(dias) || 30, 7), 400);
   const end = todayInTz();
   const settings = await loadSettings(supabase);
-  const days = await loadDays(supabase, addDays(end, -(n - 1)), end, settings);
+  const start = addDays(end, -(n - 1));
+  const [days, planned] = await Promise.all([loadDays(supabase, start, end, settings), loadPlannedExecution(supabase, start, end, settings.profile?.easy_hr_max ?? 150)]);
+  const byDate = new Map(days.map((d) => [d.date, d]));
+  // comentário de fecho para cada dia já terminado
+  const comment = (d: (typeof days)[number]) =>
+    d.date >= end
+      ? null
+      : dayCloseComment({
+          has_food: d.has_food,
+          kcal: d.summary.eaten.kcal,
+          kcal_target: d.summary.target.kcal,
+          protein_g: d.summary.eaten.protein_g,
+          protein_target: d.summary.target.protein_g,
+          fiber_g: d.summary.eaten.fiber_g,
+          fiber_target: d.summary.target.fiber_g,
+          sleep_min: byDate.get(addDays(d.date, -1))?.sleep?.total_min ?? null, // noite que acabou nessa manhã
+          weight_kg: d.weight_kg,
+          runs: d.activities.filter((a) => a.type === "corrida" && a.distance_m).map((a) => ({ km: Number(a.distance_m) / 1000, pace: a.pace, avg_hr: a.avg_hr })),
+          strength_done: d.activities.some((a) => a.type === "força"),
+          planned: planned.filter((p) => p.date === d.date),
+        });
 
   return (
     <div>
       <PageHeader title="Diário" subtitle={`Últimos ${n} dias · toca numa linha para editar`} right={<a href={`/api/export?formato=csv&dias=${n}`} className="btn btn-ghost btn-sm">CSV</a>} />
       <div className="-mx-4 overflow-x-auto px-4">
-        <table className="num w-full min-w-[1100px] text-xs">
+        <table className="num w-full min-w-[1250px] text-xs">
           <thead className="text-left text-muted">
             <tr className="border-b border-line">
-              {["Data", "Peso", "Comido", "Gasto base", "Exerc. bruto", "Exerc. aj.", "Saldo", "Prot", "Hidr", "Gord", "Fibra", "Dist.", "Ritmo", "FC", "Sono", "Notas"].map((h) => (
+              {["Data", "Peso", "Comido", "Gasto base", "Exerc. bruto", "Exerc. aj.", "Saldo", "Prot", "Hidr", "Gord", "Fibra", "Dist.", "Ritmo", "FC", "Sono", "Comentário do dia"].map((h) => (
                 <th key={h} className="px-1.5 py-2 font-medium">{h}</th>
               ))}
             </tr>
@@ -50,7 +72,10 @@ export default async function DiarioPage({ searchParams }: { searchParams: Promi
                   <td className="px-1.5 py-2">{d.run_pace ? formatPace(d.run_pace) : "—"}</td>
                   <td className="px-1.5 py-2">{d.run_avg_hr ?? "—"}</td>
                   <td className="whitespace-nowrap px-1.5 py-2">{d.sleep ? formatMinutes(d.sleep.total_min) : "—"}</td>
-                  <td className="max-w-[260px] px-1.5 py-2 text-muted"><span className="line-clamp-2">{d.notes ?? ""}</span></td>
+                  <td className="min-w-[320px] max-w-[420px] px-1.5 py-2 font-sans">
+                    {comment(d) && <p className="leading-snug">{comment(d)}</p>}
+                    {d.notes && <p className="mt-1 line-clamp-2 text-muted">{d.notes}</p>}
+                  </td>
                 </tr>
               );
             })}
