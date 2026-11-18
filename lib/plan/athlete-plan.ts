@@ -157,11 +157,11 @@ export const WEEKS: Week[] = [
     sun: long("12km a fácil (5:30-5:55/km) — início do taper", 14.5, "Longo 12km fácil — início do taper"),
   },
   {
-    n: 14, phase: F3, label: "24–28 Nov (taper)",
+    n: 14, phase: F3, label: "24–29 Nov (taper)",
     tue: { t: "qualidade", title: "4×1000m a RHM controlado + 4 strides", km: 9, pace: ZONES.RHM, hr: 175, aq: AQ15, corpo: "4×1000m a RHM ajustado, ritmo controlado (não máximo) + 4 strides.", desaq: DQ10 },
     thu: { t: "fácil", title: "20min fácil + 4-6 strides", km: 5, pace: ZONES.E, hr: 150, aq: "20min fácil (5:30-5:55/km)", corpo: "4-6 strides ~20s progressivos (controlado)", desaq: DQ5 },
-    sat: { t: "prova", title: "🏁 Meia Maratona dos Descobrimentos", km: 21.1, pace: [253, 257], corpo: "PROVA: Meia Maratona dos Descobrimentos — objetivo RHM ~4:15/km (revisto após o Tejo; PB era 4:38/km).", desaq: POS },
-    sun: { t: "recuperação", title: "Descanso total / caminhada leve pós-prova", km: null, corpo: "Descanso total / caminhada leve pós-prova" },
+    sat: { t: "fácil", title: "Ativação pré-prova: 15min fácil + 3-4 strides", km: 3.5, pace: ZONES.E, hr: 150, aq: "15min fácil (5:30-5:55/km)", corpo: "3-4 strides ~20s progressivos (controlado)", desaq: DQ5 },
+    sun: { t: "prova", title: "🏁 Meia Maratona dos Descobrimentos", km: 21.1, pace: [253, 257], corpo: "PROVA: Meia Maratona dos Descobrimentos — objetivo RHM ~4:15/km (revisto após o Tejo; PB era 4:38/km).", desaq: POS },
   },
   {
     n: 15, phase: F4, label: "1–6 Dez (recup.)",

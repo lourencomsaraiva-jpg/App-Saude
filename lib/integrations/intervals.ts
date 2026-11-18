@@ -75,6 +75,13 @@ export async function fetchEvents(cfg: IntervalsConfig, oldest: string, newest: 
   return get<Array<Record<string, unknown>>>(cfg, `/athlete/${cfg.athleteId}/events?oldest=${oldest}&newest=${newest}`);
 }
 
+/** Apaga um evento do calendário do Intervals (e, por arrasto, do Garmin). */
+export async function deleteEvent(cfg: IntervalsConfig, eventId: string | number) {
+  const auth = Buffer.from(`API_KEY:${cfg.apiKey}`).toString("base64");
+  const res = await fetch(`${BASE}/athlete/${cfg.athleteId}/events/${eventId}`, { method: "DELETE", headers: { Authorization: `Basic ${auth}` }, signal: AbortSignal.timeout(25_000), cache: "no-store" });
+  if (!res.ok && res.status !== 404) throw new Error(`Intervals.icu ${res.status} ao apagar evento`);
+}
+
 /** Diagnóstico: definições de ritmo do desporto Run (limiar, unidades). */
 export async function fetchRunSettings(cfg: IntervalsConfig) {
   const all = await get<Array<Record<string, unknown>>>(cfg, `/athlete/${cfg.athleteId}/sport-settings`);

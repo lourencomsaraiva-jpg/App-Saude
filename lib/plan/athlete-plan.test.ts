@@ -15,7 +15,8 @@ describe("plano do atleta (Ago–Dez 2026)", () => {
   it("provas nas datas certas", () => {
     expect(on("2026-09-13")[0]).toMatchObject({ type: "prova", title: "🏁 Corrida do Tejo 10km" });
     expect(on("2026-10-11")[0].title).toContain("Meia Maratona de Lisboa");
-    expect(on("2026-11-28")[0]).toMatchObject({ type: "prova", distance_km: 21.1 });
+    expect(on("2026-11-29")[0]).toMatchObject({ type: "prova", distance_km: 21.1 });
+    expect(on("2026-11-28")[0]).toMatchObject({ type: "fácil" });
     expect(on("2026-12-20")[0].title).toContain("Benfica");
   });
   it("semana tipo: seg descanso, qua/sex força", () => {

@@ -1,10 +1,10 @@
 /**
  * (CRON_SECRET) Define o ritmo de limiar da corrida no Intervals (?limiar=4:30) e reenvia os treinos de corrida
- * dos próximos 14 dias, para o Garmin receber os alvos de ritmo de cada passo.
+ * dos próximos 14 dias, para o Garmin receber os alvos de ritmo de cada passo. Apaga os que já não estão no plano.
  */
 import { NextResponse, type NextRequest } from "next/server";
 import { addDays, todayInTz } from "@/lib/calc/dates";
-import { intervalsConfigFromEnv, setRunThresholdPace } from "@/lib/integrations/intervals";
+import { deleteEvent, fetchEvents, intervalsConfigFromEnv, setRunThresholdPace } from "@/lib/integrations/intervals";
 import { sendPlannedWorkout } from "@/lib/integrations/send-workout";
 import { resolveUser } from "@/lib/mcp/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -26,6 +26,17 @@ export async function GET(req: NextRequest) {
   if (!userId) return NextResponse.json({ error: "Utilizador não encontrado" }, { status: 500 });
   const today = todayInTz();
   const { data } = await db.from("planned_workouts").select("id, date, type").eq("user_id", userId).gte("date", today).lte("date", addDays(today, 14)).in("type", ["fácil", "qualidade", "longo", "prova", "recuperação"]).order("date");
+  // apaga do calendário os treinos da app que já não correspondem ao plano (dia mudado ou removido)
+  const valid = new Set((data ?? []).map((w) => `app-${w.id}-${w.date}`));
+  const removed: string[] = [];
+  for (const e of await fetchEvents(cfg, today, addDays(today, 14))) {
+    const ext = String(e.external_id ?? "");
+    if (e.category === "WORKOUT" && ext.startsWith("app-") && !valid.has(ext)) {
+      await deleteEvent(cfg, e.id as string);
+      removed.push(`${String(e.start_date_local).slice(0, 10)} ${e.name}`);
+    }
+  }
+  out.removidos = removed;
   const sent: string[] = [];
   for (const w of data ?? []) {
     try {

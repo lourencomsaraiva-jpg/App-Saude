@@ -64,12 +64,12 @@ describe("fases calóricas", () => {
     expect(basePhaseKcal("2026-11-16", DEFAULT_PHASES, S)).toBe(2250);
     expect(basePhaseKcal("2026-11-24", DEFAULT_PHASES, S)).toBe(2250);
   });
-  it("carga 25–28/11 → 2417", () => {
-    expect(basePhaseKcal("2026-11-25", DEFAULT_PHASES, S)).toBe(2417);
-    expect(basePhaseKcal("2026-11-28", DEFAULT_PHASES, S)).toBe(2417);
+  it("carga 26–29/11 → 2417", () => {
+    expect(basePhaseKcal("2026-11-26", DEFAULT_PHASES, S)).toBe(2417);
+    expect(basePhaseKcal("2026-11-29", DEFAULT_PHASES, S)).toBe(2417);
   });
-  it("29/11 em diante → 2050", () => {
-    expect(basePhaseKcal("2026-11-29", DEFAULT_PHASES, S)).toBe(2050);
+  it("30/11 em diante → 2050", () => {
+    expect(basePhaseKcal("2026-11-30", DEFAULT_PHASES, S)).toBe(2050);
     expect(basePhaseKcal("2027-01-15", DEFAULT_PHASES, S)).toBe(2050);
   });
 });

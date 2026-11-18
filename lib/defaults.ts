@@ -38,9 +38,9 @@ export const DEFAULT_PROFILE = {
 export const DEFAULT_PHASES: Array<CaloriePhase & { note: string }> = [
   { start_date: null, end_date: "2026-11-15", base_kcal: 2050, note: "Défice ~−367/dia" },
   { start_date: "2026-11-07", end_date: "2026-11-07", base_kcal: 2250, note: "Véspera de teste longo (exceção de um dia)" },
-  { start_date: "2026-11-16", end_date: "2026-11-24", base_kcal: 2250, note: "Afinamento, défice pequeno" },
-  { start_date: "2026-11-25", end_date: "2026-11-28", base_kcal: 2417, note: "Manutenção + carga de hidratos (conta com +1 a 1,5 kg de água)" },
-  { start_date: "2026-11-29", end_date: null, base_kcal: 2050, note: "Retoma o défice" },
+  { start_date: "2026-11-16", end_date: "2026-11-25", base_kcal: 2250, note: "Afinamento, défice pequeno" },
+  { start_date: "2026-11-26", end_date: "2026-11-29", base_kcal: 2417, note: "Manutenção + carga de hidratos (conta com +1 a 1,5 kg de água)" },
+  { start_date: "2026-11-30", end_date: null, base_kcal: 2050, note: "Retoma o défice" },
 ];
 
 export interface FoodSeed {
@@ -135,7 +135,7 @@ export const DEFAULT_FAVORITE_MEALS: Array<{ name: string; label: string; items:
 export const DEFAULT_RACES = [
   { name: "Corrida do Tejo 10 km", date: "2026-09-13", distance_m: 10000, goal_time_s: null, result_time_s: 44 * 60 + 10, is_main: false },
   { name: "Meia Maratona de Lisboa (Hyundai Half)", date: "2026-10-11", distance_m: 21097, goal_time_s: null, result_time_s: 1 * 3600 + 36 * 60 + 24, is_main: false },
-  { name: "Meia Maratona dos Descobrimentos", date: "2026-11-28", distance_m: 21097, goal_time_s: 90 * 60, result_time_s: null, is_main: true },
+  { name: "Meia Maratona dos Descobrimentos", date: "2026-11-29", distance_m: 21097, goal_time_s: 90 * 60, result_time_s: null, is_main: true },
   { name: "GP de Natal Benfica 10 km", date: "2026-12-20", distance_m: 10000, goal_time_s: 40 * 60, result_time_s: null, is_main: false },
 ];
 

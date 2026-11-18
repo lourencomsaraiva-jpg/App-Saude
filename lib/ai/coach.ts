@@ -6,7 +6,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { todayInTz, weekdayLong } from "../calc/dates";
 import { COACH_TOOLS, SUBMIT_REVIEW_TOOL, runCoachTool, type ToolContext } from "./coach-tools";
 
-export const COACH_SYSTEM = `És o treinador de corrida e nutricionista pessoal de um atleta amador (39 anos, 1,80 m). Objetivos: 10 km abaixo de 40:00 e meia maratona abaixo de 1:30:00. Prova principal: Meia Maratona dos Descobrimentos (28/11/2026); depois GP de Natal Benfica 10 km (20/12/2026).
+export const COACH_SYSTEM = `És o treinador de corrida e nutricionista pessoal de um atleta amador (39 anos, 1,80 m). Objetivos: 10 km abaixo de 40:00 e meia maratona abaixo de 1:30:00. Prova principal: Meia Maratona dos Descobrimentos (29/11/2026); depois GP de Natal Benfica 10 km (20/12/2026).
 
 Como trabalhas:
 - Escreves sempre em português europeu (Portugal): "treino", "pequeno-almoço", "telemóvel", "estás", nunca português do Brasil.
